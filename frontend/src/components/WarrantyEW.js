@@ -14,10 +14,15 @@ export default function WarrantyEW({ user, showToast, onLogout }) {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('WarrantyEW - User role:', user?.role);
+    console.log('WarrantyEW - User object:', user);
+    
     if (user.role !== 'Admin' && user.role !== 'Service Coordinator') {
+      console.log('WarrantyEW - Access denied, redirecting to dashboard');
       navigate('/dashboard');
       return;
     }
+    console.log('WarrantyEW - Access granted, fetching equipment');
     fetchEquipment();
     // eslint-disable-next-line
   }, []);
@@ -28,6 +33,8 @@ export default function WarrantyEW({ user, showToast, onLogout }) {
     
     // Check if user is authenticated
     const token = localStorage.getItem('token');
+    console.log('WarrantyEW - Token exists:', !!token);
+    
     if (!token) {
       setError('Not authenticated. Please log in again.');
       setLoading(false);
@@ -35,18 +42,26 @@ export default function WarrantyEW({ user, showToast, onLogout }) {
     }
     
     try {
+      console.log('WarrantyEW - Making API call to warranty endpoint');
       const res = await axios.get('http://localhost:3000/api/schedule/equipment/warranty', {
         headers: { Authorization: `Bearer ${token}` },
       });
+      console.log('WarrantyEW - API call successful, data:', res.data);
       setEquipment(res.data);
     } catch (err) {
       console.error('Equipment fetch error:', err.response?.data || err.message);
+      console.log('WarrantyEW - Error status:', err.response?.status);
+      console.log('WarrantyEW - Error message:', err.response?.data?.message);
+      
       if (err.response?.status === 401) {
         setError('Authentication failed. Please log in again.');
         // Redirect to login if token is invalid
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         navigate('/login');
+      } else if (err.response?.status === 403) {
+        setError('Access denied. You need Admin or Service Coordinator role to view this page.');
+        // Don't redirect to login for 403, just show error
       } else {
         setError('Failed to fetch equipment: ' + (err.response?.data?.message || err.message));
       }
