@@ -12,7 +12,29 @@ export default function Equipment({ user, showToast, onLogout }) {
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState(null);
-  const [form, setForm] = useState({ serialNumber: '', model: '', warranty_status: 'In-warranty', warranty_expiry: '' });
+  const [form, setForm] = useState({ 
+    name: '', 
+    type: '', 
+    serialNumber: '', 
+    model: '', 
+    manufacturer: '',
+    client: '',
+    site: '',
+    installationDate: new Date().toISOString().split('T')[0],
+    location: '',
+    roomNumber: '',
+    warrantyStatus: 'Under Warranty',
+    warrantyStartDate: '',
+    warrantyEndDate: '',
+    warrantyProvider: '',
+    warrantyNumber: '',
+    status: 'Active',
+    purchaseDate: '',
+    purchasePrice: '',
+    supplier: '',
+    purchaseOrderNumber: '',
+    notes: ''
+  });
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
 
@@ -81,18 +103,79 @@ export default function Equipment({ user, showToast, onLogout }) {
   const openModal = (eq = null) => {
     setEditingEquipment(eq);
     setForm(eq ? {
-      serialNumber: eq.serialNumber || eq.serialNumber || '',
+      name: eq.name || '',
+      type: eq.type || '',
+      serialNumber: eq.serialNumber || '',
       model: eq.model || '',
-      warranty_status: eq.warranty_status || 'In-warranty',
-      warranty_expiry: eq.warranty_expiry || ''
-    } : { serialNumber: '', model: '', warranty_status: 'In-warranty', warranty_expiry: '' });
+      manufacturer: eq.manufacturer || '',
+      client: eq.client?._id || eq.client || '',
+      site: eq.site?._id || eq.site || '',
+      installationDate: eq.installationDate ? new Date(eq.installationDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      location: eq.location || '',
+      roomNumber: eq.roomNumber || '',
+      warrantyStatus: eq.warrantyStatus || 'Under Warranty',
+      warrantyStartDate: eq.warrantyStartDate ? new Date(eq.warrantyStartDate).toISOString().split('T')[0] : '',
+      warrantyEndDate: eq.warrantyEndDate ? new Date(eq.warrantyEndDate).toISOString().split('T')[0] : '',
+      warrantyProvider: eq.warrantyProvider || '',
+      warrantyNumber: eq.warrantyNumber || '',
+      status: eq.status || 'Active',
+      purchaseDate: eq.purchaseDate ? new Date(eq.purchaseDate).toISOString().split('T')[0] : '',
+      purchasePrice: eq.purchasePrice || '',
+      supplier: eq.supplier || '',
+      purchaseOrderNumber: eq.purchaseOrderNumber || '',
+      notes: eq.notes || ''
+    } : { 
+      name: '', 
+      type: '', 
+      serialNumber: '', 
+      model: '', 
+      manufacturer: '',
+      client: '',
+      site: '',
+      installationDate: new Date().toISOString().split('T')[0],
+      location: '',
+      roomNumber: '',
+      warrantyStatus: 'Under Warranty',
+      warrantyStartDate: '',
+      warrantyEndDate: '',
+      warrantyProvider: '',
+      warrantyNumber: '',
+      status: 'Active',
+      purchaseDate: '',
+      purchasePrice: '',
+      supplier: '',
+      purchaseOrderNumber: '',
+      notes: ''
+    });
     setModalOpen(true);
   };
 
   const closeModal = () => {
     setModalOpen(false);
     setEditingEquipment(null);
-    setForm({ serialNumber: '', model: '', warranty_status: 'In-warranty', warranty_expiry: '' });
+    setForm({ 
+      name: '', 
+      type: '', 
+      serialNumber: '', 
+      model: '', 
+      manufacturer: '',
+      client: '',
+      site: '',
+      installationDate: new Date().toISOString().split('T')[0],
+      location: '',
+      roomNumber: '',
+      warrantyStatus: 'Under Warranty',
+      warrantyStartDate: '',
+      warrantyEndDate: '',
+      warrantyProvider: '',
+      warrantyNumber: '',
+      status: 'Active',
+      purchaseDate: '',
+      purchasePrice: '',
+      supplier: '',
+      purchaseOrderNumber: '',
+      notes: ''
+    });
   };
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
@@ -101,21 +184,38 @@ export default function Equipment({ user, showToast, onLogout }) {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      // Prepare payload
+      if (!token) {
+        onLogout();
+        return;
+      }
+
+      // Prepare payload with proper date conversions
       const payload = {
         ...form,
-        warranty_expiry: form.warranty_expiry ? new Date(form.warranty_expiry) : null,
+        installationDate: form.installationDate ? new Date(form.installationDate) : new Date(),
+        warrantyStartDate: form.warrantyStartDate ? new Date(form.warrantyStartDate) : null,
+        warrantyEndDate: form.warrantyEndDate ? new Date(form.warrantyEndDate) : null,
+        purchaseDate: form.purchaseDate ? new Date(form.purchaseDate) : null,
+        purchasePrice: form.purchasePrice ? parseFloat(form.purchasePrice) : null,
+        createdBy: user._id
       };
+
       if (editingEquipment) {
-        await axios.put(`http://localhost:3000/api/equipment/${editingEquipment._id}`, payload, { headers: { Authorization: `Bearer ${token}` } });
-        showToast('Equipment updated!');
+        await axios.put(`http://localhost:3000/api/equipment/${editingEquipment._id}`, payload, { 
+          headers: { Authorization: `Bearer ${token}` } 
+        });
+        showToast('Equipment updated successfully!', 'success');
       } else {
-        await axios.post(`http://localhost:3000/api/sites/${selectedSite}/equipment`, payload, { headers: { Authorization: `Bearer ${token}` } });
-        showToast('Equipment added!');
+        await axios.post(`http://localhost:3000/api/sites/${selectedSite}/equipment`, payload, { 
+          headers: { Authorization: `Bearer ${token}` } 
+        });
+        showToast('Equipment added successfully!', 'success');
       }
       closeModal();
+      
+      // Refresh equipment list
       const refreshToken = localStorage.getItem('token');
-      if (refreshToken) {
+      if (refreshToken && selectedSite) {
         axios.get(`http://localhost:3000/api/sites/${selectedSite}/equipment`, {
           headers: { Authorization: `Bearer ${refreshToken}` }
         }).then(res => setEquipment(res.data)).catch(err => {
@@ -123,7 +223,11 @@ export default function Equipment({ user, showToast, onLogout }) {
         });
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Error', 'error');
+      if (err.response?.status === 401) {
+        onLogout();
+      } else {
+        showToast(err.response?.data?.message || 'Error occurred', 'error');
+      }
     }
   };
 
@@ -131,19 +235,44 @@ export default function Equipment({ user, showToast, onLogout }) {
     if (!window.confirm('Delete this equipment?')) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:3000/api/equipment/${id}`, { headers: { Authorization: `Bearer ${token}` } });
-      showToast('Equipment deleted!');
-      axios.get(`http://localhost:3000/api/sites/${selectedSite}/equipment`).then(res => setEquipment(res.data));
+      if (!token) {
+        onLogout();
+        return;
+      }
+      await axios.delete(`http://localhost:3000/api/equipment/${id}`, { 
+        headers: { Authorization: `Bearer ${token}` } 
+      });
+      showToast('Equipment deleted successfully!', 'success');
+      
+      // Refresh equipment list
+      if (selectedSite) {
+        axios.get(`http://localhost:3000/api/sites/${selectedSite}/equipment`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(res => setEquipment(res.data)).catch(err => {
+          console.error('Failed to refresh equipment:', err.response?.data || err.message);
+        });
+      }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Error', 'error');
+      if (err.response?.status === 401) {
+        onLogout();
+      } else {
+        showToast(err.response?.data?.message || 'Error occurred', 'error');
+      }
     }
   };
 
   // Warranty badge color
   const warrantyBadge = (status) => {
-    return status === 'In-warranty'
-      ? 'bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold'
-      : 'bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold';
+    switch (status) {
+      case 'Under Warranty':
+        return 'bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold';
+      case 'Out of Warranty':
+        return 'bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold';
+      case 'Extended Warranty':
+        return 'bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold';
+      default:
+        return 'bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-bold';
+    }
   };
 
   return (

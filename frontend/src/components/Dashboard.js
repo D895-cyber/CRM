@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, MapPin, Settings, RefreshCw, FileText, CalendarClock, CheckSquare, Shield, Upload, TrendingUp, Activity, Database, BarChart3, Bell, Download, Plus, UserPlus, Wrench, Calendar, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Users, MapPin, Settings, RefreshCw, FileText, CalendarClock, CheckSquare, Shield, Upload, TrendingUp, Activity, Database, BarChart3, Bell, Download, Plus, UserPlus, Wrench, Package, Calendar, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import RecentActivity from './RecentActivity';
 import DashboardStats from './DashboardStats';
@@ -47,6 +47,15 @@ export default function Dashboard({ user, onLogout }) {
       onClick: () => navigate('/equipment'),
     },
     {
+      key: 'spare-parts',
+      icon: <Package className="h-6 w-6" />,
+      title: 'Spare Parts',
+      desc: 'Manage spare parts and maintenance',
+      gradient: 'from-red-500 to-red-600',
+      hoverGradient: 'from-red-600 to-red-700',
+      onClick: () => navigate('/spare-parts'),
+    },
+    {
       key: 'schedule',
       icon: <Calendar className="h-6 w-6" />,
       title: 'Schedule',
@@ -69,8 +78,8 @@ export default function Dashboard({ user, onLogout }) {
       icon: <Shield className="h-6 w-6" />,
       title: 'RMA',
       desc: 'Manage warranty claims',
-      gradient: 'from-red-500 to-red-600',
-      hoverGradient: 'from-red-600 to-red-700',
+      gradient: 'from-rose-500 to-rose-600',
+      hoverGradient: 'from-rose-600 to-rose-700',
       onClick: () => navigate('/rma'),
     },
     {

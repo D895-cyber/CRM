@@ -16,6 +16,7 @@ import WarrantyEW from './components/WarrantyEW';
 import VoucherManagement from './components/VoucherManagement';
 import VoucherReviewTable from './components/VoucherReviewTable';
 import DataImport from './components/DataImport';
+import SpareParts from './components/SpareParts';
 // import other components as needed
 
 function PrivateRoute({ children }) {
@@ -147,14 +148,22 @@ function App() {
           </PrivateRoute>
         }
       />
-      <Route
-        path="/data-import"
-        element={
-          <PrivateRoute>
-            <DataImport user={user} showToast={() => {}} onLogout={handleLogout} />
-          </PrivateRoute>
-        }
-      />
+                <Route
+            path="/data-import"
+            element={
+              <PrivateRoute>
+                <DataImport user={user} showToast={() => {}} onLogout={handleLogout} />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/spare-parts"
+            element={
+              <PrivateRoute>
+                <SpareParts user={user} showToast={() => {}} onLogout={handleLogout} />
+              </PrivateRoute>
+            }
+          />
       {/* Add more protected routes here, wrapped in <PrivateRoute> */}
       <Route
         path="/"
