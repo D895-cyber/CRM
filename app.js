@@ -14,6 +14,7 @@ const app = express();
 app.use(express.json());
 app.use(cors({ origin: 'http://localhost:4000' }));
 app.use('/uploads/vouchers', express.static(path.join(__dirname, 'uploads/vouchers')));
+app.use('/uploads/reports', express.static(path.join(__dirname, 'uploads/reports')));
 
 // Routes
 app.use('/api/auth', authRoutes);

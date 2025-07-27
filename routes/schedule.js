@@ -7,6 +7,66 @@ const Site = require('../models/Site');
 const { authenticate } = require('../middleware/auth');
 const multer = require('multer');
 const Report = require('../models/Report');
+const { google } = require('googleapis');
+const path = require('path');
+const fs = require('fs');
+const DRIVE_KEY_PATH = path.join(__dirname, '../config/drive-service-account.json');
+const PARENT_FOLDER_ID = '1CvEE902i55rj4dy1R55P7zfUB8sGiNY_'; // Set this to your Drive folder ID
+const cloudinary = require('../config/cloudinary');
+
+cloudinary.config({
+  cloud_name: 'dxepnpgw7', // replace with your Cloudinary cloud name
+  api_key: '287815833958953',       // replace with your Cloudinary API key
+  api_secret: 'dQDFju6yXN5WXI1SAcyaxdd7wqw' 
+});
+
+module.exports = cloudinary;
+
+const auth = new google.auth.GoogleAuth({
+  keyFile: DRIVE_KEY_PATH,
+  scopes: ['https://www.googleapis.com/auth/drive'],
+});
+const drive = google.drive({ version: 'v3', auth });
+
+async function getOrCreateFolder(serialNumber, parentFolderId) {
+  const res = await drive.files.list({
+    q: `'${parentFolderId}' in parents and name='${serialNumber}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    fields: 'files(id, name)',
+  });
+  if (res.data.files.length > 0) return res.data.files[0].id;
+  const folder = await drive.files.create({
+    resource: {
+      name: serialNumber,
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: [parentFolderId],
+    },
+    fields: 'id',
+  });
+  return folder.data.id;
+}
+
+async function uploadPhotoToDrive(localFilePath, serialNumber, parentFolderId) {
+  const folderId = await getOrCreateFolder(serialNumber, parentFolderId);
+  const fileMetadata = {
+    name: path.basename(localFilePath),
+    parents: [folderId],
+  };
+  const media = {
+    mimeType: 'image/jpeg',
+    body: fs.createReadStream(localFilePath),
+  };
+  const file = await drive.files.create({
+    resource: fileMetadata,
+    media,
+    fields: 'id, webViewLink, webContentLink',
+  });
+  return file.data;
+}
+
+const uploadReportsDir = path.join(__dirname, '../uploads/reports');
+if (!fs.existsSync(uploadReportsDir)) {
+  fs.mkdirSync(uploadReportsDir, { recursive: true });
+}
 
 // Middleware to check admin or coordinator
 function isAdminOrCoordinator(req, res, next) {
@@ -71,6 +131,16 @@ router.get('/fse/:fseId', authenticate, async (req, res) => {
     }
     const schedules = await Schedule.find({ assignedFSE: req.params.fseId }).populate('equipment site assignedFSE createdBy');
     res.json(schedules);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// List all equipment with warranty/EW info
+router.get('/equipment/warranty', authenticate, isAdminOrCoordinator, async (req, res) => {
+  try {
+    const equipment = await Equipment.find().populate('ew_history.renewed_by');
+    res.json(equipment);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -176,7 +246,23 @@ router.get('/attendance', authenticate, isAdminOrCoordinator, async (req, res) =
 router.post('/report', authenticate, isFSE, reportUpload.array('photos', 10), async (req, res) => {
   try {
     const data = JSON.parse(req.body.data); // All form fields except files
-    const photos = req.files ? req.files.map(f => f.path) : [];
+    const schedule = await Schedule.findById(data.schedule).populate('equipment');
+    const serialNumber = schedule && schedule.equipment && schedule.equipment.serialNumber;
+    console.log('Schedule:', schedule);
+    console.log('Equipment:', schedule && schedule.equipment);
+    console.log('Serial Number:', serialNumber);
+    const folderName = serialNumber || 'unknown';
+    const photos = [];
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        // Upload to Cloudinary, folder by serial number or 'unknown'
+        const result = await cloudinary.uploader.upload(file.path, {
+          folder: `reports/${folderName}`
+        });
+        photos.push(result.secure_url); // Use the secure URL
+        fs.unlinkSync(file.path); // Remove local file after upload
+      }
+    }
     const report = new Report({
       ...data,
       fse: req.user._id,
@@ -192,11 +278,50 @@ router.post('/report', authenticate, isFSE, reportUpload.array('photos', 10), as
 // Get report by scheduleId (Admin/Coordinator/FSE)
 router.get('/report/:scheduleId', authenticate, async (req, res) => {
   try {
-    const report = await Report.findOne({ schedule: req.params.scheduleId });
+    const report = await Report.findOne({ schedule: req.params.scheduleId })
+      .populate({ path: 'schedule', populate: [{ path: 'equipment' }, { path: 'site' }] });
     if (!report) return res.status(404).json({ message: 'Report not found' });
     res.json(report);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+// Get all reports for a particular equipment (Admin/Coordinator)
+router.get('/reports/equipment/:equipmentId', authenticate, isAdminOrCoordinator, async (req, res) => {
+  try {
+    const reports = await Report.find()
+      .populate({
+        path: 'schedule',
+        match: { equipment: req.params.equipmentId },
+        populate: [{ path: 'equipment' }, { path: 'site' }]
+      })
+      .populate('fse');
+    // Filter out reports where schedule is null (not matching equipment)
+    res.json(reports.filter(r => r.schedule));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Renew EW for a piece of equipment
+router.post('/equipment/:id/renew-ew', authenticate, isAdminOrCoordinator, async (req, res) => {
+  try {
+    const { ew_expiry, notes } = req.body;
+    const equipment = await Equipment.findById(req.params.id);
+    if (!equipment) return res.status(404).json({ message: 'Equipment not found' });
+    equipment.ew_status = 'Active';
+    equipment.ew_expiry = ew_expiry;
+    equipment.ew_history.push({
+      renewal_date: new Date(),
+      renewed_by: req.user._id,
+      ew_expiry,
+      notes
+    });
+    await equipment.save();
+    res.json(equipment);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
   }
 });
 

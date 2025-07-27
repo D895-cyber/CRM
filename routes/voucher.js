@@ -41,7 +41,7 @@ router.post(
     }
     try {
       const voucher = new Voucher({
-        fseId: req.user.userId,
+        fseId: req.user._id,
         fseName: req.user.name,
         amount: req.body.amount,
         date: req.body.date,
@@ -61,7 +61,7 @@ router.get('/', authenticate, async (req, res) => {
   try {
     let vouchers;
     if (req.user.role === 'FSE') {
-      vouchers = await Voucher.find({ fseId: req.user.userId }).sort({ createdAt: -1 });
+      vouchers = await Voucher.find({ fseId: req.user._id }).sort({ createdAt: -1 });
     } else {
       vouchers = await Voucher.find().populate('fseId', 'name').sort({ createdAt: -1 });
     }
