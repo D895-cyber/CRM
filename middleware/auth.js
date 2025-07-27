@@ -23,4 +23,9 @@ function requireAdmin(req, res, next) {
   return res.status(403).json({ message: 'Admin access required' });
 }
 
-module.exports = { authenticate, requireAdmin }; 
+function requireAdminOrManager(req, res, next) {
+  if (req.user && (req.user.role === 'Admin' || req.user.role === 'Manager')) return next();
+  return res.status(403).json({ message: 'Admin or Manager access required' });
+}
+
+module.exports = { authenticate, requireAdmin, requireAdminOrManager }; 

@@ -118,6 +118,16 @@ router.delete('/sites/:id', authenticate, requireAdmin, async (req, res) => {
 });
 
 // --- Equipment Routes ---
+// Get all equipment
+router.get('/equipment', authenticate, async (req, res) => {
+  try {
+    const equipment = await Equipment.find().populate('site', 'name');
+    res.json(equipment);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Get all equipment for a site
 router.get('/sites/:siteId/equipment', async (req, res) => {
   try {

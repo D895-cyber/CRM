@@ -47,7 +47,7 @@ const upload = multer({
 });
 
 // Import data endpoint
-router.post('/', authenticate, requireAdminOrManager, upload.single('file'), async (req, res) => {
+router.post('/', upload.single('file'), authenticate, requireAdminOrManager, async (req, res) => {
   try {
     const { type } = req.body;
     const file = req.file;

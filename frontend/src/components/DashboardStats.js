@@ -25,21 +25,35 @@ const DashboardStats = ({ user }) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      // Fetch all data for analytics
-      const [vouchersRes, clientsRes, equipmentRes, schedulesRes] = await Promise.all([
+      // Fetch vouchers and clients (these should work for all users)
+      const [vouchersRes, clientsRes] = await Promise.all([
         axios.get('http://localhost:3000/api/vouchers', {
           headers: { Authorization: `Bearer ${token}` }
         }),
         axios.get('http://localhost:3000/api/clients', {
           headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get('http://localhost:3000/api/equipment', {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get('http://localhost:3000/api/schedule', {
-          headers: { Authorization: `Bearer ${token}` }
         })
       ]);
+
+      let equipmentRes = { data: [] };
+      let schedulesRes = { data: [] };
+
+      // Try to fetch equipment and schedules (Admin/Manager only)
+      try {
+        equipmentRes = await axios.get('http://localhost:3000/api/equipment', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (error) {
+        console.log('Equipment access not available for this user role');
+      }
+
+      try {
+        schedulesRes = await axios.get('http://localhost:3000/api/schedule', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (error) {
+        console.log('Schedule access not available for this user role');
+      }
 
       const vouchers = vouchersRes.data;
       const clients = clientsRes.data;
