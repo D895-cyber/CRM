@@ -1,119 +1,157 @@
 import React from 'react';
-import { Plus, FileText, Calendar, Users, Settings, Upload, Download, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Plus, UserPlus, Wrench, Calendar, Upload, Download, Bell, BarChart3, FileText, Settings, Zap, Target } from 'lucide-react';
 
-const QuickActions = ({ user }) => {
+export default function QuickActions({ user }) {
   const navigate = useNavigate();
 
   const actions = [
     {
-      key: 'add-voucher',
-      icon: Plus,
       title: 'Add Voucher',
-      description: 'Create a new voucher',
-      color: 'bg-blue-500 hover:bg-blue-600',
+      description: 'Create a new expense voucher',
+      icon: <Plus className="h-6 w-6" />,
+      gradient: 'from-blue-500 to-blue-600',
+      hoverGradient: 'from-blue-600 to-blue-700',
       onClick: () => navigate('/vouchers'),
       roles: ['Admin', 'Manager', 'FSE']
     },
     {
-      key: 'add-client',
-      icon: Users,
       title: 'Add Client',
       description: 'Register a new client',
-      color: 'bg-green-500 hover:bg-green-600',
+      icon: <UserPlus className="h-6 w-6" />,
+      gradient: 'from-emerald-500 to-emerald-600',
+      hoverGradient: 'from-emerald-600 to-emerald-700',
       onClick: () => navigate('/clients'),
       roles: ['Admin', 'Manager']
     },
     {
-      key: 'add-equipment',
-      icon: Settings,
       title: 'Add Equipment',
       description: 'Register new equipment',
-      color: 'bg-purple-500 hover:bg-purple-600',
+      icon: <Wrench className="h-6 w-6" />,
+      gradient: 'from-orange-500 to-orange-600',
+      hoverGradient: 'from-orange-600 to-orange-700',
       onClick: () => navigate('/equipment'),
       roles: ['Admin', 'Manager']
     },
     {
-      key: 'create-schedule',
-      icon: Calendar,
       title: 'Create Schedule',
       description: 'Schedule a service job',
-      color: 'bg-orange-500 hover:bg-orange-600',
+      icon: <Calendar className="h-6 w-6" />,
+      gradient: 'from-purple-500 to-purple-600',
+      hoverGradient: 'from-purple-600 to-purple-700',
       onClick: () => navigate('/schedule'),
       roles: ['Admin', 'Service Coordinator']
     },
     {
-      key: 'import-data',
-      icon: Upload,
       title: 'Import Data',
       description: 'Import from Excel/CSV',
-      color: 'bg-teal-500 hover:bg-teal-600',
+      icon: <Upload className="h-6 w-6" />,
+      gradient: 'from-cyan-500 to-cyan-600',
+      hoverGradient: 'from-cyan-600 to-cyan-700',
       onClick: () => navigate('/data-import'),
-      roles: ['Admin']
-    },
-    {
-      key: 'export-reports',
-      icon: Download,
-      title: 'Export Reports',
-      description: 'Download reports',
-      color: 'bg-indigo-500 hover:bg-indigo-600',
-      onClick: () => {
-        // TODO: Implement export functionality
-        alert('Export functionality coming soon!');
-      },
       roles: ['Admin', 'Manager']
     },
     {
-      key: 'notifications',
-      icon: Bell,
+      title: 'Export Reports',
+      description: 'Download reports',
+      icon: <Download className="h-6 w-6" />,
+      gradient: 'from-indigo-500 to-indigo-600',
+      hoverGradient: 'from-indigo-600 to-indigo-700',
+      onClick: () => navigate('/equipment-reports'),
+      roles: ['Admin', 'Manager']
+    },
+    {
       title: 'Notifications',
       description: 'View all notifications',
-      color: 'bg-red-500 hover:bg-red-600',
-      onClick: () => {
-        // TODO: Implement notifications
-        alert('Notifications coming soon!');
-      },
+      icon: <Bell className="h-6 w-6" />,
+      gradient: 'from-pink-500 to-pink-600',
+      hoverGradient: 'from-pink-600 to-pink-700',
+      onClick: () => navigate('/notifications'),
       roles: ['Admin', 'Manager', 'FSE']
     },
     {
-      key: 'view-reports',
-      icon: FileText,
       title: 'View Reports',
       description: 'Analytics & reports',
-      color: 'bg-gray-500 hover:bg-gray-600',
-      onClick: () => navigate('/equipment-reports'),
-      roles: ['Admin']
+      icon: <BarChart3 className="h-6 w-6" />,
+      gradient: 'from-violet-500 to-violet-600',
+      hoverGradient: 'from-violet-600 to-violet-700',
+      onClick: () => navigate('/reports'),
+      roles: ['Admin', 'Manager']
     }
   ];
 
-  // Filter actions based on user role
-  const userActions = actions.filter(action => 
-    action.roles.includes(user?.role)
+  const filteredActions = actions.filter(action => 
+    action.roles.includes(user.role)
   );
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {userActions.map((action) => {
-          const IconComponent = action.icon;
-          return (
-            <button
-              key={action.key}
-              onClick={action.onClick}
-              className={`${action.color} text-white p-4 rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
-            >
-              <div className="flex flex-col items-center text-center">
-                <IconComponent className="w-6 h-6 mb-2" />
-                <span className="text-sm font-medium">{action.title}</span>
-                <span className="text-xs opacity-90 mt-1">{action.description}</span>
-              </div>
-            </button>
-          );
-        })}
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Quick Actions</h2>
+          <p className="text-gray-600">Common tasks and shortcuts</p>
+        </div>
+        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+          <Zap className="h-6 w-6 text-white" />
+        </div>
       </div>
+
+      {/* Actions Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+        {filteredActions.map((action, index) => (
+          <button
+            key={action.title}
+            onClick={action.onClick}
+            className={`group relative overflow-hidden bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-500/20`}
+            style={{
+              animationDelay: `${index * 100}ms`
+            }}
+          >
+            {/* Background Pattern */}
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            
+            {/* Content */}
+            <div className="relative z-10">
+              <div className="mb-4 group-hover:scale-110 transition-transform duration-300">
+                <div className={`w-12 h-12 bg-gradient-to-br ${action.gradient} rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300`}>
+                  {action.icon}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-gray-800 group-hover:text-gray-900 transition-colors duration-300">
+                  {action.title}
+                </h3>
+                <p className="text-gray-600 text-sm group-hover:text-gray-700 transition-colors duration-300">
+                  {action.description}
+                </p>
+              </div>
+            </div>
+            
+            {/* Hover Arrow */}
+            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
+              <div className="w-6 h-6 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                <Target className="h-3 w-3 text-white" />
+              </div>
+            </div>
+            
+            {/* Gradient Overlay on Hover */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${action.hoverGradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
+          </button>
+        ))}
+      </div>
+
+      {/* Empty State */}
+      {filteredActions.length === 0 && (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-gradient-to-r from-gray-300 to-gray-400 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Settings className="h-8 w-8 text-gray-500" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-600 mb-2">No Quick Actions Available</h3>
+          <p className="text-gray-500">Quick actions will appear here based on your role and permissions.</p>
+        </div>
+      )}
     </div>
   );
-};
-
-export default QuickActions; 
+} 
