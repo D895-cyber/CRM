@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, FileText, Users, MapPin, Settings, Calendar, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { Upload, FileText, Users, MapPin, Settings, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 

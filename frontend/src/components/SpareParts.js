@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Plus, Search, Filter, Download, RefreshCw, Eye, Edit, Trash2, 
-  Calendar, User, Package, AlertCircle, CheckCircle, Clock, 
-  ArrowUpDown, Wrench, DollarSign, TrendingUp, Activity, 
-  FileText, Settings, Zap, Target, AlertTriangle, Info
+  Plus, Search, Download, RefreshCw, Eye, Edit, Trash2, 
+  Calendar, Package, AlertCircle, CheckCircle, Clock, 
+  ArrowUpDown, DollarSign, AlertTriangle, Settings
 } from 'lucide-react';
 import Modal from './Modal';
 import ConfirmDialog from './ConfirmDialog';
@@ -70,14 +69,7 @@ export default function SpareParts({ user, showToast, onLogout }) {
     }
   });
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      onLogout();
-      return {};
-    }
-    return { Authorization: `Bearer ${token}` };
-  };
+
 
   const fetchSpareParts = async () => {
     setLoading(true);
@@ -141,7 +133,7 @@ export default function SpareParts({ user, showToast, onLogout }) {
     fetchSpareParts();
     fetchEquipment();
     fetchStats();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCreate = async () => {
     try {
@@ -321,15 +313,7 @@ export default function SpareParts({ user, showToast, onLogout }) {
     }
   };
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'Critical': return 'bg-red-100 text-red-800';
-      case 'High': return 'bg-orange-100 text-orange-800';
-      case 'Medium': return 'bg-yellow-100 text-yellow-800';
-      case 'Low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+
 
   const filteredAndSortedSpareParts = spareParts
     .filter(sp => {

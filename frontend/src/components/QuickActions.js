@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, UserPlus, Wrench, Calendar, Upload, Download, Bell, BarChart3, FileText, Settings, Zap, Target } from 'lucide-react';
+import { Plus, UserPlus, Wrench, Calendar, Upload, Download, Bell, BarChart3, Settings, Zap, Target } from 'lucide-react';
 
 export default function QuickActions({ user }) {
   const navigate = useNavigate();

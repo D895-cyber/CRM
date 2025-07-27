@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, MapPin, Settings, RefreshCw, FileText, CalendarClock, CheckSquare, Shield, Upload, TrendingUp, Activity, Database, BarChart3, Bell, Download, Plus, UserPlus, Wrench, Package, Calendar, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Users, MapPin, RefreshCw, FileText, CheckSquare, Shield, Upload, TrendingUp, Activity, Database, BarChart3, UserPlus, Wrench, Package, Calendar, ArrowUpRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import RecentActivity from './RecentActivity';
 import DashboardStats from './DashboardStats';
@@ -89,7 +89,7 @@ export default function Dashboard({ user, onLogout }) {
       desc: 'Track warranty and extended warranty',
       gradient: 'from-pink-500 to-pink-600',
       hoverGradient: 'from-pink-600 to-pink-700',
-      onClick: () => navigate('/warranty'),
+      onClick: () => navigate('/warranty-ew'),
     },
     {
       key: 'vouchers',

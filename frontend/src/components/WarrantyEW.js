@@ -16,6 +16,13 @@ export default function WarrantyEW({ user, showToast, onLogout }) {
   useEffect(() => {
     console.log('WarrantyEW - User role:', user?.role);
     console.log('WarrantyEW - User object:', user);
+    console.log('WarrantyEW - Token exists:', !!localStorage.getItem('token'));
+    
+    if (!user) {
+      console.log('WarrantyEW - No user object, redirecting to login');
+      navigate('/login');
+      return;
+    }
     
     if (user.role !== 'Admin' && user.role !== 'Service Coordinator') {
       console.log('WarrantyEW - Access denied, redirecting to dashboard');

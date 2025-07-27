@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Clock, FileText, Calendar, User, TrendingUp, Activity, AlertCircle } from 'lucide-react';
+import { Clock, FileText, Calendar, TrendingUp, Activity, AlertCircle } from 'lucide-react';
 
 export default function RecentActivity({ user }) {
   const [activities, setActivities] = useState([]);

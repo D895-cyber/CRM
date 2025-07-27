@@ -55,7 +55,7 @@ export default function VoucherManagement({ user, showToast, onLogout }) {
 
   useEffect(() => {
     fetchVouchers();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleVoucherUploaded = () => {
     fetchVouchers();

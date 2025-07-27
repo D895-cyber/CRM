@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Modal from './Modal';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, Download, RefreshCw, Eye, Edit, Trash2, Calendar, User, Package, AlertCircle, CheckCircle, Clock, ArrowUpDown } from 'lucide-react';
+import { Plus, Search, Download, RefreshCw, Eye, Edit, Package, AlertCircle, CheckCircle, Clock, ArrowUpDown } from 'lucide-react';
 
 export default function RMA({ user, showToast, onLogout }) {
   const [rmas, setRMAs] = useState([]);
