@@ -23,17 +23,22 @@ export default function VoucherManagement({ user, showToast, onLogout }) {
     setError('');
     try {
       const token = localStorage.getItem('token');
+      console.log('Token from localStorage:', token ? 'Token exists' : 'No token');
       if (!token) {
         setError('Not authenticated. Please log in again.');
         setLoading(false);
         return;
       }
+      console.log('Making API call to fetch vouchers...');
       const res = await axios.get('http://localhost:3000/api/vouchers', {
         headers: { Authorization: `Bearer ${token}` },
       });
+      console.log('Vouchers fetched successfully:', res.data.length, 'vouchers');
       setVouchers(res.data);
     } catch (err) {
       console.error('Failed to fetch vouchers:', err.response?.data || err.message);
+      console.error('Error status:', err.response?.status);
+      console.error('Error headers:', err.response?.headers);
       if (err.response?.status === 401) {
         setError('Authentication failed. Please log in again.');
         localStorage.removeItem('token');
@@ -48,7 +53,7 @@ export default function VoucherManagement({ user, showToast, onLogout }) {
 
   useEffect(() => {
     fetchVouchers();
-  }, [fetchVouchers]);
+  }, []);
 
   const handleVoucherUploaded = () => {
     fetchVouchers();
