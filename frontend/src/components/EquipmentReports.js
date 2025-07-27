@@ -29,12 +29,23 @@ export default function EquipmentReports({ user, showToast, onLogout }) {
 
   const fetchEquipment = async () => {
     try {
-      const res = await axios.get('http://localhost:3000/api/clients');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Not authenticated. Please log in again.');
+        return;
+      }
+      const res = await axios.get('http://localhost:3000/api/clients', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       let allEquipment = [];
       for (const client of res.data) {
-        const sitesRes = await axios.get(`http://localhost:3000/api/clients/${client._id}/sites`);
+        const sitesRes = await axios.get(`http://localhost:3000/api/clients/${client._id}/sites`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         for (const site of sitesRes.data) {
-          const eqRes = await axios.get(`http://localhost:3000/api/sites/${site._id}/equipment`);
+          const eqRes = await axios.get(`http://localhost:3000/api/sites/${site._id}/equipment`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
           for (const eq of eqRes.data) {
             allEquipment.push({ ...eq, site });
           }
@@ -42,7 +53,15 @@ export default function EquipmentReports({ user, showToast, onLogout }) {
       }
       setEquipmentList(allEquipment);
     } catch (err) {
-      setError('Failed to fetch equipment');
+      console.error('Failed to fetch equipment:', err.response?.data || err.message);
+      if (err.response?.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+      } else {
+        setError('Failed to fetch equipment: ' + (err.response?.data?.message || err.message));
+      }
     }
   };
 
@@ -52,12 +71,25 @@ export default function EquipmentReports({ user, showToast, onLogout }) {
     setError('');
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Not authenticated. Please log in again.');
+        setLoading(false);
+        return;
+      }
       const res = await axios.get(`http://localhost:3000/api/schedule/reports/equipment/${equipmentId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setReports(res.data);
     } catch (err) {
-      setError('Failed to fetch reports');
+      console.error('Failed to fetch reports:', err.response?.data || err.message);
+      if (err.response?.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+      } else {
+        setError('Failed to fetch reports: ' + (err.response?.data?.message || err.message));
+      }
     }
     setLoading(false);
   };

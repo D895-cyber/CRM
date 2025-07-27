@@ -27,14 +27,28 @@ export default function FseSchedule({ user, showToast, onLogout }) {
 
   const fetchSchedules = async () => {
     setLoading(true);
+    setError('');
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Not authenticated. Please log in again.');
+        setLoading(false);
+        return;
+      }
       const res = await axios.get(`http://localhost:3000/api/schedule/fse/${user.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSchedules(res.data);
     } catch (err) {
-      setError('Failed to fetch schedules');
+      console.error('Failed to fetch schedules:', err.response?.data || err.message);
+      if (err.response?.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+      } else {
+        setError('Failed to fetch schedules: ' + (err.response?.data?.message || err.message));
+      }
     }
     setLoading(false);
   };
@@ -47,6 +61,10 @@ export default function FseSchedule({ user, showToast, onLogout }) {
   const handleSubmitDone = async (id) => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Not authenticated. Please log in again.');
+        return;
+      }
       await axios.patch(`http://localhost:3000/api/schedule/${id}/status`, { status: 'Completed', notes }, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -55,7 +73,15 @@ export default function FseSchedule({ user, showToast, onLogout }) {
       fetchSchedules();
       showToast && showToast('Marked as completed!');
     } catch (err) {
-      setError('Failed to update status');
+      console.error('Failed to update status:', err.response?.data || err.message);
+      if (err.response?.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+      } else {
+        setError('Failed to update status: ' + (err.response?.data?.message || err.message));
+      }
     }
   };
 
@@ -67,6 +93,10 @@ export default function FseSchedule({ user, showToast, onLogout }) {
   const handleSubmitNotDone = async (id) => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Not authenticated. Please log in again.');
+        return;
+      }
       await axios.patch(`http://localhost:3000/api/schedule/${id}/status`, { status: 'Cancelled', notes: notDoneReason }, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -75,7 +105,15 @@ export default function FseSchedule({ user, showToast, onLogout }) {
       fetchSchedules();
       showToast && showToast('Marked as not done!');
     } catch (err) {
-      setError('Failed to update status');
+      console.error('Failed to update status:', err.response?.data || err.message);
+      if (err.response?.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+      } else {
+        setError('Failed to update status: ' + (err.response?.data?.message || err.message));
+      }
     }
   };
 
@@ -108,6 +146,10 @@ export default function FseSchedule({ user, showToast, onLogout }) {
     setReportError('');
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setReportError('Not authenticated. Please log in again.');
+        return;
+      }
       const formData = new FormData();
       formData.append('data', JSON.stringify({
         ...reportForm,
@@ -122,7 +164,15 @@ export default function FseSchedule({ user, showToast, onLogout }) {
       fetchSchedules();
       showToast && showToast('Report submitted!');
     } catch (err) {
-      setReportError(err.response?.data?.message || 'Failed to submit report');
+      console.error('Failed to submit report:', err.response?.data || err.message);
+      if (err.response?.status === 401) {
+        setReportError('Authentication failed. Please log in again.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+      } else {
+        setReportError(err.response?.data?.message || 'Failed to submit report');
+      }
     }
   };
 

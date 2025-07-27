@@ -26,14 +26,28 @@ export default function Attendance({ user, showToast, onLogout }) {
 
   const fetchAttendance = async (selectedDate) => {
     setLoading(true);
+    setError('');
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Not authenticated. Please log in again.');
+        setLoading(false);
+        return;
+      }
       const res = await axios.get(`http://localhost:3000/api/schedule/attendance?date=${selectedDate}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setAttendance(res.data);
     } catch (err) {
-      setError('Failed to fetch attendance');
+      console.error('Failed to fetch attendance:', err.response?.data || err.message);
+      if (err.response?.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+      } else {
+        setError('Failed to fetch attendance: ' + (err.response?.data?.message || err.message));
+      }
     }
     setLoading(false);
   };
@@ -52,12 +66,25 @@ export default function Attendance({ user, showToast, onLogout }) {
     setReportLoading(true);
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setReportError('Not authenticated. Please log in again.');
+        setReportLoading(false);
+        return;
+      }
       const res = await axios.get(`http://localhost:3000/api/schedule/report/${job.jobId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setReportData(res.data);
     } catch (err) {
-      setReportError('No report found for this job.');
+      console.error('Failed to fetch report:', err.response?.data || err.message);
+      if (err.response?.status === 401) {
+        setReportError('Authentication failed. Please log in again.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+      } else {
+        setReportError('No report found for this job.');
+      }
     }
     setReportLoading(false);
   };

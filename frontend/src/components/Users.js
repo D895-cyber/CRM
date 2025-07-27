@@ -21,14 +21,28 @@ export default function Users({ user, showToast, onLogout }) {
 
   const fetchUsers = async () => {
     setLoading(true);
+    setError('');
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Not authenticated. Please log in again.');
+        setLoading(false);
+        return;
+      }
       const res = await axios.get('http://localhost:3000/api/users', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(res.data);
     } catch (err) {
-      setError('Failed to fetch users');
+      console.error('Failed to fetch users:', err.response?.data || err.message);
+      if (err.response?.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+      } else {
+        setError('Failed to fetch users: ' + (err.response?.data?.message || err.message));
+      }
     }
     setLoading(false);
   };
@@ -46,6 +60,10 @@ export default function Users({ user, showToast, onLogout }) {
     setError('');
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Not authenticated. Please log in again.');
+        return;
+      }
       await axios.post('http://localhost:3000/api/users', form, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -53,7 +71,15 @@ export default function Users({ user, showToast, onLogout }) {
       fetchUsers();
       showToast && showToast('User added!');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add user');
+      console.error('Failed to add user:', err.response?.data || err.message);
+      if (err.response?.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+      } else {
+        setError(err.response?.data?.message || 'Failed to add user');
+      }
     }
   };
 
@@ -61,13 +87,25 @@ export default function Users({ user, showToast, onLogout }) {
     if (!window.confirm('Delete this user?')) return;
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Not authenticated. Please log in again.');
+        return;
+      }
       await axios.delete(`http://localhost:3000/api/users/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchUsers();
       showToast && showToast('User deleted!');
     } catch (err) {
-      setError('Failed to delete user');
+      console.error('Failed to delete user:', err.response?.data || err.message);
+      if (err.response?.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+      } else {
+        setError('Failed to delete user: ' + (err.response?.data?.message || err.message));
+      }
     }
   };
 
