@@ -1,5 +1,6 @@
 import { Users, MapPin, Settings, RefreshCw, FileText, CalendarClock, CheckSquare, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import RecentActivity from './RecentActivity';
 
 export default function Dashboard({ user, onLogout }) {
   const navigate = useNavigate();
@@ -125,20 +126,31 @@ export default function Dashboard({ user, onLogout }) {
         </div>
       </nav>
       {/* Dashboard content */}
-      <div className="max-w-5xl mx-auto mt-12 p-6">
+      <div className="max-w-7xl mx-auto mt-12 p-6">
         <h1 className="text-4xl font-extrabold text-gray-800 mb-8 text-center tracking-tight">CRM Dashboard</h1>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-          {cards.map(card => (
-            <button
-              key={card.key}
-              onClick={card.onClick ? card.onClick : () => navigate('/' + card.key)}
-              className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 flex flex-col items-center hover:shadow-2xl hover:-translate-y-1 transition-all group focus:outline-none"
-            >
-              <div className="mb-4 group-hover:scale-110 transition-transform">{card.icon}</div>
-              <div className="text-xl font-bold mb-2 text-gray-800 group-hover:text-blue-700">{card.title}</div>
-              <div className="text-gray-500 text-center text-sm">{card.desc}</div>
-            </button>
-          ))}
+        
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Main cards */}
+          <div className="lg:col-span-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              {cards.map(card => (
+                <button
+                  key={card.key}
+                  onClick={card.onClick ? card.onClick : () => navigate('/' + card.key)}
+                  className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 flex flex-col items-center hover:shadow-2xl hover:-translate-y-1 transition-all group focus:outline-none"
+                >
+                  <div className="mb-4 group-hover:scale-110 transition-transform">{card.icon}</div>
+                  <div className="text-lg font-bold mb-2 text-gray-800 group-hover:text-blue-700">{card.title}</div>
+                  <div className="text-gray-500 text-center text-sm">{card.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Recent Activity Sidebar */}
+          <div className="lg:col-span-1">
+            <RecentActivity user={user} />
+          </div>
         </div>
       </div>
     </div>

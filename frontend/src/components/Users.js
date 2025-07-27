@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import ConfirmDialog from './ConfirmDialog';
 
 export default function Users({ user, showToast, onLogout }) {
   const [users, setUsers] = useState([]);
@@ -8,6 +9,7 @@ export default function Users({ user, showToast, onLogout }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', password: '', role: '' });
   const [error, setError] = useState('');
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, userId: null });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -84,14 +86,17 @@ export default function Users({ user, showToast, onLogout }) {
   };
 
   const handleDelete = async id => {
-    if (!window.confirm('Delete this user?')) return;
+    setConfirmDialog({ isOpen: true, userId: id });
+  };
+
+  const confirmDelete = async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
         setError('Not authenticated. Please log in again.');
         return;
       }
-      await axios.delete(`http://localhost:3000/api/users/${id}`, {
+      await axios.delete(`http://localhost:3000/api/users/${confirmDialog.userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchUsers();
@@ -200,6 +205,18 @@ export default function Users({ user, showToast, onLogout }) {
             </div>
           </div>
         )}
+        
+        {/* Confirmation Dialog */}
+        <ConfirmDialog
+          isOpen={confirmDialog.isOpen}
+          onClose={() => setConfirmDialog({ isOpen: false, userId: null })}
+          onConfirm={confirmDelete}
+          title="Delete User"
+          message="Are you sure you want to delete this user? This action cannot be undone."
+          confirmText="Delete"
+          cancelText="Cancel"
+          type="danger"
+        />
       </div>
     </div>
   );

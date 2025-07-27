@@ -3,6 +3,8 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import UploadVoucherForm from './UploadVoucherForm';
 import MyVouchers from './MyVouchers';
+import BackToTop from './BackToTop';
+import LoadingSkeleton from './LoadingSkeleton';
 
 export default function VoucherManagement({ user, showToast, onLogout }) {
   const [vouchers, setVouchers] = useState([]);
@@ -121,13 +123,17 @@ export default function VoucherManagement({ user, showToast, onLogout }) {
         {error && <div className="text-red-600 text-center font-medium mb-4">{error}</div>}
 
         {activeTab === 'list' ? (
-          <MyVouchers 
-            user={user} 
-            vouchers={vouchers} 
-            loading={loading} 
-            error={error} 
-            fetchVouchers={fetchVouchers}
-          />
+          loading ? (
+            <LoadingSkeleton type="table" rows={5} />
+          ) : (
+            <MyVouchers 
+              user={user} 
+              vouchers={vouchers} 
+              loading={loading} 
+              error={error} 
+              fetchVouchers={fetchVouchers}
+            />
+          )
         ) : (
           <UploadVoucherForm 
             user={user} 
@@ -135,6 +141,7 @@ export default function VoucherManagement({ user, showToast, onLogout }) {
           />
         )}
       </div>
+      <BackToTop />
     </div>
   );
 } 
