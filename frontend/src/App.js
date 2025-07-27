@@ -21,9 +21,25 @@ import SpareParts from './components/SpareParts';
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('token');
-  const user = localStorage.getItem('user');
+  const userStr = localStorage.getItem('user');
   
-  if (!token || !user) {
+  if (!token || !userStr) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    return <Navigate to="/login" />;
+  }
+  
+  // Try to parse user data
+  try {
+    const user = JSON.parse(userStr);
+    if (!user || !user.role) {
+      console.error('PrivateRoute: Invalid user data:', user);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      return <Navigate to="/login" />;
+    }
+  } catch (error) {
+    console.error('PrivateRoute: Failed to parse user data:', error);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     return <Navigate to="/login" />;
@@ -35,7 +51,17 @@ function PrivateRoute({ children }) {
 function App() {
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
+    if (!stored) return null;
+    
+    try {
+      const parsed = JSON.parse(stored);
+      console.log('App: Loaded user from localStorage:', parsed);
+      return parsed;
+    } catch (error) {
+      console.error('App: Failed to parse user from localStorage:', error);
+      localStorage.removeItem('user');
+      return null;
+    }
   });
 
   const handleLogout = () => setUser(null);

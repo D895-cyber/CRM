@@ -9,6 +9,13 @@ export default function Dashboard({ user, onLogout }) {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
+  // Safety check - if user is null, redirect to login
+  if (!user) {
+    console.log('Dashboard: No user object, redirecting to login');
+    navigate('/login');
+    return null;
+  }
+
   const cards = [
     {
       key: 'users',
@@ -102,7 +109,7 @@ export default function Dashboard({ user, onLogout }) {
     },
   ];
 
-  if (user.role === 'Admin') {
+  if (user?.role === 'Admin') {
     cards.push({
       key: 'voucher-review',
       icon: <BarChart3 className="h-6 w-6" />,
@@ -114,7 +121,7 @@ export default function Dashboard({ user, onLogout }) {
     });
   }
 
-  if (user.role === 'Admin') {
+  if (user?.role === 'Admin') {
     cards.push({
       key: 'data-import',
       icon: <Upload className="h-6 w-6" />,
@@ -157,12 +164,12 @@ export default function Dashboard({ user, onLogout }) {
               <div className="flex items-center space-x-3 bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/20">
                 <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
                   <span className="text-white font-semibold text-sm">
-                    {user.name?.charAt(0) || 'U'}
+                    {user?.name?.charAt(0) || 'U'}
                   </span>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-800">{user.name}</p>
-                  <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+                  <p className="text-sm font-semibold text-gray-800">{user?.name || 'User'}</p>
+                  <p className="text-xs text-gray-500 capitalize">{user?.role || 'Unknown'}</p>
                 </div>
               </div>
               
@@ -193,7 +200,7 @@ export default function Dashboard({ user, onLogout }) {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-3xl font-bold text-gray-800 mb-2">
-                  Welcome back, {user.name}! 👋
+                  Welcome back, {user?.name || 'User'}! 👋
                 </h2>
                 <p className="text-gray-600 text-lg">
                   Here's what's happening with your field service operations today.
