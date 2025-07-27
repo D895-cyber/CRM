@@ -15,7 +15,13 @@ function requireAdminOrManager(req, res, next) {
 // GET all RMAs (authenticated)
 router.get('/', authenticate, async (req, res) => {
   try {
-    const rmas = await RMA.find().sort({ requested: -1 });
+    const rmas = await RMA.find()
+      .populate('equipment', 'name serialNumber model manufacturer')
+      .populate('sparePart', 'partNumber name description')
+      .populate('clientId', 'name')
+      .populate('createdBy', 'name')
+      .populate('updatedBy', 'name')
+      .sort({ requested: -1 });
     res.json(rmas);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch RMAs' });

@@ -121,7 +121,12 @@ router.delete('/sites/:id', authenticate, requireAdmin, async (req, res) => {
 // Get all equipment
 router.get('/equipment', authenticate, async (req, res) => {
   try {
-    const equipment = await Equipment.find().populate('site', 'name');
+    const equipment = await Equipment.find()
+      .populate('client', 'name')
+      .populate('site', 'name')
+      .populate('spareParts', 'partNumber name status')
+      .populate('createdBy', 'name')
+      .sort({ createdAt: -1 });
     res.json(equipment);
   } catch (err) {
     res.status(500).json({ message: err.message });
