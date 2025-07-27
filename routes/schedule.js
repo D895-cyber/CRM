@@ -136,6 +136,16 @@ router.get('/fse/:fseId', authenticate, async (req, res) => {
   }
 });
 
+// Debug endpoint to check user role
+router.get('/debug/user', authenticate, async (req, res) => {
+  res.json({
+    userId: req.user._id,
+    name: req.user.name,
+    role: req.user.role,
+    email: req.user.email
+  });
+});
+
 // List all equipment with warranty/EW info
 router.get('/equipment/warranty', authenticate, isAdminOrCoordinator, async (req, res) => {
   try {
