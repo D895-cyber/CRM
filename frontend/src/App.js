@@ -15,6 +15,7 @@ import EquipmentReports from './components/EquipmentReports';
 import WarrantyEW from './components/WarrantyEW';
 import VoucherManagement from './components/VoucherManagement';
 import VoucherReviewTable from './components/VoucherReviewTable';
+import DataImport from './components/DataImport';
 // import other components as needed
 
 function PrivateRoute({ children }) {
@@ -143,6 +144,14 @@ function App() {
         element={
           <PrivateRoute>
             <VoucherReviewTable user={user} showToast={() => {}} onLogout={handleLogout} />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/data-import"
+        element={
+          <PrivateRoute>
+            <DataImport user={user} showToast={() => {}} onLogout={handleLogout} />
           </PrivateRoute>
         }
       />

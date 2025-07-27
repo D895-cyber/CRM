@@ -1,6 +1,8 @@
-import { Users, MapPin, Settings, RefreshCw, FileText, CalendarClock, CheckSquare, Shield } from 'lucide-react';
+import { Users, MapPin, Settings, RefreshCw, FileText, CalendarClock, CheckSquare, Shield, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import RecentActivity from './RecentActivity';
+import DashboardStats from './DashboardStats';
+import QuickActions from './QuickActions';
 
 export default function Dashboard({ user, onLogout }) {
   const navigate = useNavigate();
@@ -104,6 +106,16 @@ export default function Dashboard({ user, onLogout }) {
       onClick: () => navigate('/voucher-review'),
     });
   }
+  
+  if (user.role === 'Admin') {
+    cards.push({
+      key: 'data-import',
+      icon: <Upload className="h-8 w-8 text-purple-600" />, 
+      title: 'Data Import',
+      desc: 'Import data from Excel/CSV files.',
+      onClick: () => navigate('/data-import'),
+    });
+  }
 
   return (
     <div>
@@ -128,6 +140,12 @@ export default function Dashboard({ user, onLogout }) {
       {/* Dashboard content */}
       <div className="max-w-7xl mx-auto mt-12 p-6">
         <h1 className="text-4xl font-extrabold text-gray-800 mb-8 text-center tracking-tight">CRM Dashboard</h1>
+        
+        {/* Dashboard Statistics */}
+        <DashboardStats user={user} />
+        
+        {/* Quick Actions */}
+        <QuickActions user={user} />
         
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Main cards */}

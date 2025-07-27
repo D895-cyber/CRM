@@ -5,6 +5,7 @@ const clientRoutes = require('./routes/client');
 const rmaRoutes = require('./routes/rma');
 const voucherRoutes = require('./routes/voucher');
 const scheduleRouter = require('./routes/schedule');
+const importRoutes = require('./routes/import');
 const cors = require('cors');
 const path = require('path');
 
@@ -22,6 +23,7 @@ app.use('/api', clientRoutes);
 app.use('/api/rma', rmaRoutes);
 app.use('/api/vouchers', voucherRoutes);
 app.use('/api/schedule', scheduleRouter);
+app.use('/api/import', importRoutes);
 
 // MongoDB connection
 const MONGO_URI = 'mongodb+srv://dev:dev123@cluster0.es90y1z.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
