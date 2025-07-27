@@ -30,10 +30,7 @@ app.use('/api/spare-parts', sparePartsRoutes);
 // MongoDB connection
 const MONGO_URI = 'mongodb+srv://dev:dev123@cluster0.es90y1z.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 
-mongoose.connect(MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+mongoose.connect(MONGO_URI)
 .then(() => {
   console.log('MongoDB connected');
   app.listen(3000, () => {

@@ -180,7 +180,6 @@ RMASchema.pre('save', function(next) {
 });
 
 // Index for better query performance
-RMASchema.index({ caseNumber: 1 });
 RMASchema.index({ equipment: 1 });
 RMASchema.index({ sparePart: 1 });
 RMASchema.index({ status: 1 });

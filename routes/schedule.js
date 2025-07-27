@@ -139,7 +139,11 @@ router.get('/fse/:fseId', authenticate, async (req, res) => {
 // List all equipment with warranty/EW info
 router.get('/equipment/warranty', authenticate, isAdminOrCoordinator, async (req, res) => {
   try {
-    const equipment = await Equipment.find().populate('ew_history.renewed_by');
+    const equipment = await Equipment.find()
+      .populate('client', 'name')
+      .populate('site', 'name')
+      .populate('ewHistory.renewedBy', 'name')
+      .populate('createdBy', 'name');
     res.json(equipment);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -310,16 +314,25 @@ router.post('/equipment/:id/renew-ew', authenticate, isAdminOrCoordinator, async
     const { ew_expiry, notes } = req.body;
     const equipment = await Equipment.findById(req.params.id);
     if (!equipment) return res.status(404).json({ message: 'Equipment not found' });
-    equipment.ew_status = 'Active';
-    equipment.ew_expiry = ew_expiry;
-    equipment.ew_history.push({
-      renewal_date: new Date(),
-      renewed_by: req.user._id,
-      ew_expiry,
+    
+    equipment.ewStatus = 'Active';
+    equipment.ewEndDate = ew_expiry;
+    equipment.ewHistory.push({
+      renewalDate: new Date(),
+      renewedBy: req.user._id,
+      ewExpiry: ew_expiry,
       notes
     });
     await equipment.save();
-    res.json(equipment);
+    
+    // Populate the updated equipment before sending response
+    const updatedEquipment = await Equipment.findById(req.params.id)
+      .populate('client', 'name')
+      .populate('site', 'name')
+      .populate('ewHistory.renewedBy', 'name')
+      .populate('createdBy', 'name');
+    
+    res.json(updatedEquipment);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }

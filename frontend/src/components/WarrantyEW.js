@@ -14,7 +14,7 @@ export default function WarrantyEW({ user, showToast, onLogout }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user.role !== 'Admin') {
+    if (user.role !== 'Admin' && user.role !== 'Service Coordinator') {
       navigate('/dashboard');
       return;
     }
@@ -162,18 +162,18 @@ export default function WarrantyEW({ user, showToast, onLogout }) {
                     <tr key={eq._id} className="even:bg-gray-50 hover:bg-blue-50 transition-colors">
                       <td className="px-5 py-3 font-medium">{eq.serialNumber}</td>
                       <td className="px-5 py-3">{eq.model}</td>
-                      <td className="px-5 py-3">{eq.warranty_status}</td>
-                      <td className="px-5 py-3">{eq.warranty_expiry ? new Date(eq.warranty_expiry).toLocaleDateString() : ''}</td>
-                      <td className="px-5 py-3">{eq.ew_status}</td>
-                      <td className="px-5 py-3">{eq.ew_expiry ? new Date(eq.ew_expiry).toLocaleDateString() : ''}</td>
+                      <td className="px-5 py-3">{eq.warrantyStatus}</td>
+                      <td className="px-5 py-3">{eq.warrantyEndDate ? new Date(eq.warrantyEndDate).toLocaleDateString() : ''}</td>
+                      <td className="px-5 py-3">{eq.ewStatus}</td>
+                      <td className="px-5 py-3">{eq.ewEndDate ? new Date(eq.ewEndDate).toLocaleDateString() : ''}</td>
                       <td className="px-5 py-3">
                         <ul className="list-disc ml-4">
-                          {eq.ew_history && eq.ew_history.map((h, idx) => (
+                          {eq.ewHistory && eq.ewHistory.map((h, idx) => (
                             <li key={idx}>
-                              {h.renewal_date && `Renewed: ${new Date(h.renewal_date).toLocaleDateString()}`}<br />
-                              {h.ew_expiry && `EW Expiry: ${new Date(h.ew_expiry).toLocaleDateString()}`}<br />
+                              {h.renewalDate && `Renewed: ${new Date(h.renewalDate).toLocaleDateString()}`}<br />
+                              {h.ewExpiry && `EW Expiry: ${new Date(h.ewExpiry).toLocaleDateString()}`}<br />
                               {h.notes && `Notes: ${h.notes}`}<br />
-                              {h.renewed_by && h.renewed_by.name && `By: ${h.renewed_by.name}`}
+                              {h.renewedBy && h.renewedBy.name && `By: ${h.renewedBy.name}`}
                             </li>
                           ))}
                         </ul>

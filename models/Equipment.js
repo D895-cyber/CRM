@@ -130,7 +130,6 @@ equipmentSchema.virtual('totalSparePartsCost').get(function() {
 });
 
 // Index for better query performance
-equipmentSchema.index({ serialNumber: 1 });
 equipmentSchema.index({ client: 1 });
 equipmentSchema.index({ site: 1 });
 equipmentSchema.index({ status: 1 });
