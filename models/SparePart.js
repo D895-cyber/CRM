@@ -9,6 +9,7 @@ const sparePartSchema = new mongoose.Schema({
   
   // Equipment Relationship
   equipment: { type: mongoose.Schema.Types.ObjectId, ref: 'Equipment', required: true },
+  masterSparePart: { type: mongoose.Schema.Types.ObjectId, ref: 'MasterSparePart' }, // NEW: link to master spare part
   
   // Manufacturer Information
   manufacturer: { type: String, required: true },
@@ -19,7 +20,7 @@ const sparePartSchema = new mongoose.Schema({
   // Usage Information
   quantityUsed: { type: Number, required: true, default: 1 },
   unitCost: { type: Number, required: true },
-  totalCost: { type: Number, required: true },
+  totalCost: { type: Number }, // Will be calculated automatically
   
   // Installation Information
   installationDate: { type: Date, required: true },
@@ -124,7 +125,18 @@ sparePartSchema.virtual('needsReplacement').get(function() {
 
 // Virtual for total maintenance cost
 sparePartSchema.virtual('totalMaintenanceCost').get(function() {
+  if (!this.maintenanceHistory || !Array.isArray(this.maintenanceHistory)) {
+    return 0;
+  }
   return this.maintenanceHistory.reduce((total, maintenance) => total + (maintenance.cost || 0), 0);
+});
+
+// Pre-validate middleware to calculate total cost before validation
+sparePartSchema.pre('validate', function(next) {
+  if (this.quantityUsed && this.unitCost) {
+    this.totalCost = this.quantityUsed * this.unitCost;
+  }
+  next();
 });
 
 // Pre-save middleware to calculate total cost

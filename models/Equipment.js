@@ -120,6 +120,9 @@ equipmentSchema.virtual('isEWActive').get(function() {
 
 // Virtual for total maintenance cost
 equipmentSchema.virtual('totalMaintenanceCost').get(function() {
+  if (!this.maintenanceHistory || !Array.isArray(this.maintenanceHistory)) {
+    return 0;
+  }
   return this.maintenanceHistory.reduce((total, maintenance) => total + (maintenance.cost || 0), 0);
 });
 

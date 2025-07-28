@@ -318,6 +318,17 @@ router.get('/reports/equipment/:equipmentId', authenticate, isAdminOrCoordinator
   }
 });
 
+// Get all reports for a particular FSE
+router.get('/reports/fse/:fseId', authenticate, isFSE, async (req, res) => {
+  try {
+    const reports = await Report.find({ fse: req.params.fseId })
+      .populate({ path: 'schedule', populate: [{ path: 'equipment' }, { path: 'site' }] });
+    res.json(reports);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Renew EW for a piece of equipment
 router.post('/equipment/:id/renew-ew', authenticate, isAdminOrCoordinator, async (req, res) => {
   try {

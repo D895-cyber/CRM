@@ -105,17 +105,17 @@ export default function Equipment({ user, showToast, onLogout }) {
     setForm(eq ? {
       name: eq.name || '',
       type: eq.type || '',
-      serialNumber: eq.serialNumber || '',
+      serialNumber: eq.serialNumber || eq.serial_number || '',
       model: eq.model || '',
       manufacturer: eq.manufacturer || '',
-      client: eq.client?._id || eq.client || '',
-      site: eq.site?._id || eq.site || '',
+      client: eq.client?._id || eq.client || selectedClient,
+      site: eq.site?._id || eq.site || selectedSite,
       installationDate: eq.installationDate ? new Date(eq.installationDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       location: eq.location || '',
       roomNumber: eq.roomNumber || '',
-      warrantyStatus: eq.warrantyStatus || 'Under Warranty',
+      warrantyStatus: eq.warrantyStatus || eq.warranty_status || 'Under Warranty',
       warrantyStartDate: eq.warrantyStartDate ? new Date(eq.warrantyStartDate).toISOString().split('T')[0] : '',
-      warrantyEndDate: eq.warrantyEndDate ? new Date(eq.warrantyEndDate).toISOString().split('T')[0] : '',
+      warrantyEndDate: eq.warrantyEndDate ? new Date(eq.warrantyEndDate).toISOString().split('T')[0] : (eq.warranty_expiry ? new Date(eq.warranty_expiry).toISOString().split('T')[0] : ''),
       warrantyProvider: eq.warrantyProvider || '',
       warrantyNumber: eq.warrantyNumber || '',
       status: eq.status || 'Active',
@@ -130,8 +130,8 @@ export default function Equipment({ user, showToast, onLogout }) {
       serialNumber: '', 
       model: '', 
       manufacturer: '',
-      client: '',
-      site: '',
+      client: selectedClient,
+      site: selectedSite,
       installationDate: new Date().toISOString().split('T')[0],
       location: '',
       roomNumber: '',
@@ -159,8 +159,8 @@ export default function Equipment({ user, showToast, onLogout }) {
       serialNumber: '', 
       model: '', 
       manufacturer: '',
-      client: '',
-      site: '',
+      client: selectedClient,
+      site: selectedSite,
       installationDate: new Date().toISOString().split('T')[0],
       location: '',
       roomNumber: '',
@@ -182,12 +182,29 @@ export default function Equipment({ user, showToast, onLogout }) {
 
   const handleSubmit = async e => {
     e.preventDefault();
+    console.log('🔍 Equipment form submitted');
+    console.log('📝 Form data:', form);
+    console.log('👤 User:', user);
+    console.log('👤 User.id:', user?.id);
+    console.log('👤 User._id:', user?._id);
+    console.log('📍 Selected site:', selectedSite);
+    
     try {
       const token = localStorage.getItem('token');
       if (!token) {
+        console.log('❌ No token found, logging out');
         onLogout();
         return;
       }
+
+      // Validate required fields
+      if (!form.name || !form.type || !form.serialNumber || !form.model || !form.manufacturer) {
+        console.log('❌ Validation failed - missing required fields');
+        showToast('Please fill in all required fields (Name, Type, Serial Number, Model, Manufacturer)', 'error');
+        return;
+      }
+
+      console.log('✅ Validation passed, preparing payload');
 
       // Prepare payload with proper date conversions
       const payload = {
@@ -197,18 +214,23 @@ export default function Equipment({ user, showToast, onLogout }) {
         warrantyEndDate: form.warrantyEndDate ? new Date(form.warrantyEndDate) : null,
         purchaseDate: form.purchaseDate ? new Date(form.purchaseDate) : null,
         purchasePrice: form.purchasePrice ? parseFloat(form.purchasePrice) : null,
-        createdBy: user._id
+        createdBy: user.id || user._id
       };
 
+      console.log('📦 Payload prepared:', payload);
+
       if (editingEquipment) {
+        console.log('🔄 Updating existing equipment');
         await axios.put(`http://localhost:3000/api/equipment/${editingEquipment._id}`, payload, { 
           headers: { Authorization: `Bearer ${token}` } 
         });
         showToast('Equipment updated successfully!', 'success');
       } else {
-        await axios.post(`http://localhost:3000/api/sites/${selectedSite}/equipment`, payload, { 
+        console.log('➕ Adding new equipment');
+        const response = await axios.post(`http://localhost:3000/api/sites/${selectedSite}/equipment`, payload, { 
           headers: { Authorization: `Bearer ${token}` } 
         });
+        console.log('✅ Equipment added successfully:', response.data);
         showToast('Equipment added successfully!', 'success');
       }
       closeModal();
@@ -216,17 +238,27 @@ export default function Equipment({ user, showToast, onLogout }) {
       // Refresh equipment list
       const refreshToken = localStorage.getItem('token');
       if (refreshToken && selectedSite) {
+        console.log('🔄 Refreshing equipment list');
         axios.get(`http://localhost:3000/api/sites/${selectedSite}/equipment`, {
           headers: { Authorization: `Bearer ${refreshToken}` }
-        }).then(res => setEquipment(res.data)).catch(err => {
-          console.error('Failed to refresh equipment:', err.response?.data || err.message);
+        }).then(res => {
+          console.log('✅ Equipment list refreshed:', res.data.length, 'items');
+          setEquipment(res.data);
+        }).catch(err => {
+          console.error('❌ Failed to refresh equipment:', err.response?.data || err.message);
         });
       }
     } catch (err) {
+      console.error('❌ Equipment submission error:', err);
+      console.error('📝 Error details:', err.response?.data);
+      
       if (err.response?.status === 401) {
+        console.log('🔐 Unauthorized, logging out');
         onLogout();
       } else {
-        showToast(err.response?.data?.message || 'Error occurred', 'error');
+        const errorMessage = err.response?.data?.message || 'Error occurred';
+        console.log('📝 Showing error toast:', errorMessage);
+        showToast(errorMessage, 'error');
       }
     }
   };
@@ -336,8 +368,10 @@ export default function Equipment({ user, showToast, onLogout }) {
             <table className="min-w-full table-auto">
               <thead className="bg-gradient-to-r from-green-50 to-teal-100 sticky top-0 z-10">
                 <tr>
+                  <th className="px-5 py-3 text-left text-sm font-bold">Name</th>
                   <th className="px-5 py-3 text-left text-sm font-bold">Serial Number</th>
                   <th className="px-5 py-3 text-left text-sm font-bold">Model</th>
+                  <th className="px-5 py-3 text-left text-sm font-bold">Type</th>
                   <th className="px-5 py-3 text-left text-sm font-bold">Warranty Status</th>
                   <th className="px-5 py-3 text-left text-sm font-bold">Warranty Expiry</th>
                   {user.role === 'Admin' && <th className="px-5 py-3 text-sm font-bold text-center">Actions</th>}
@@ -345,13 +379,15 @@ export default function Equipment({ user, showToast, onLogout }) {
               </thead>
               <tbody>
                 {equipment
-                 .filter(eq => eq.serialNumber && eq.serialNumber.toLowerCase().includes(search.toLowerCase()))
+                 .filter(eq => (eq.serialNumber || eq.serial_number) && (eq.serialNumber || eq.serial_number).toLowerCase().includes(search.toLowerCase()))
                  .map(eq => (
                   <tr key={eq._id} className="even:bg-gray-50 hover:bg-green-50 transition-colors">
-                    <td className="px-5 py-3 font-medium">{eq.serialNumber}</td>
+                    <td className="px-5 py-3 font-medium">{eq.name}</td>
+                    <td className="px-5 py-3">{eq.serialNumber || eq.serial_number}</td>
                     <td className="px-5 py-3">{eq.model}</td>
-                    <td className="px-5 py-3"><span className={warrantyBadge(eq.warranty_status)}>{eq.warranty_status}</span></td>
-                    <td className="px-5 py-3">{eq.warranty_expiry ? eq.warranty_expiry.substring(0,10) : ''}</td>
+                    <td className="px-5 py-3">{eq.type}</td>
+                    <td className="px-5 py-3"><span className={warrantyBadge(eq.warrantyStatus || eq.warranty_status)}>{eq.warrantyStatus || eq.warranty_status}</span></td>
+                    <td className="px-5 py-3">{(eq.warrantyEndDate ? new Date(eq.warrantyEndDate).toISOString().split('T')[0] : '') || (eq.warranty_expiry ? new Date(eq.warranty_expiry).toISOString().split('T')[0] : '')}</td>
                     {user.role === 'Admin' && (
                       <td className="px-5 py-3 flex gap-2 justify-center">
                         <button className="bg-yellow-400 text-black px-3 py-1.5 rounded-lg hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-300 transition-all" onClick={() => openModal(eq)}>Edit</button>
@@ -366,16 +402,126 @@ export default function Equipment({ user, showToast, onLogout }) {
         )}
         <Modal isOpen={modalOpen} onClose={closeModal} title={editingEquipment ? 'Edit Equipment' : 'Add Equipment'}>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <input name="serialNumber" placeholder="Serial Number" value={form.serialNumber} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all" />
-            <input name="model" placeholder="Model" value={form.model} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all" />
-            <select name="warranty_status" value={form.warranty_status} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all">
-              <option value="In-warranty">In-warranty</option>
-              <option value="Out-of-warranty">Out-of-warranty</option>
-            </select>
-            <input name="warranty_expiry" type="date" value={form.warranty_expiry} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all" />
+            {/* Essential Fields Only */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input 
+                name="name" 
+                placeholder="Equipment Name *" 
+                value={form.name} 
+                onChange={handleChange} 
+                required 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all" 
+              />
+              <input 
+                name="type" 
+                placeholder="Equipment Type *" 
+                value={form.type} 
+                onChange={handleChange} 
+                required 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all" 
+              />
+              <input 
+                name="serialNumber" 
+                placeholder="Serial Number *" 
+                value={form.serialNumber} 
+                onChange={handleChange} 
+                required 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all" 
+              />
+              <input 
+                name="model" 
+                placeholder="Model *" 
+                value={form.model} 
+                onChange={handleChange} 
+                required 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all" 
+              />
+              <input 
+                name="manufacturer" 
+                placeholder="Manufacturer *" 
+                value={form.manufacturer} 
+                onChange={handleChange} 
+                required 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all" 
+              />
+              <input 
+                name="location" 
+                placeholder="Location" 
+                value={form.location} 
+                onChange={handleChange} 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all" 
+              />
+              <input 
+                name="installationDate" 
+                type="date" 
+                value={form.installationDate} 
+                onChange={handleChange} 
+                required 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all" 
+              />
+              <select 
+                name="warrantyStatus" 
+                value={form.warrantyStatus} 
+                onChange={handleChange} 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all"
+              >
+                <option value="Under Warranty">Under Warranty</option>
+                <option value="Out of Warranty">Out of Warranty</option>
+                <option value="Extended Warranty">Extended Warranty</option>
+              </select>
+              <input 
+                name="warrantyEndDate" 
+                type="date" 
+                placeholder="Warranty End Date" 
+                value={form.warrantyEndDate} 
+                onChange={handleChange} 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all" 
+              />
+              <select 
+                name="status" 
+                value={form.status} 
+                onChange={handleChange} 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all"
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Under Maintenance">Under Maintenance</option>
+                <option value="Out of Service">Out of Service</option>
+                <option value="Retired">Retired</option>
+              </select>
+            </div>
+            
+            {/* Optional Notes Field */}
+            <textarea 
+              name="notes" 
+              placeholder="Notes (Optional)" 
+              value={form.notes} 
+              onChange={handleChange} 
+              rows="2" 
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all"
+            ></textarea>
+            
+            {/* Action Buttons */}
             <div className="flex gap-3 justify-end pt-2">
-              <button type="button" className="bg-gray-200 px-5 py-2 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all" onClick={closeModal}>Cancel</button>
-              <button type="submit" className="bg-teal-500 text-white px-5 py-2 rounded-lg hover:bg-teal-600 shadow focus:outline-none focus:ring-2 focus:ring-teal-400 transition-all">{editingEquipment ? 'Update' : 'Add'} Equipment</button>
+              <button 
+                type="button" 
+                className="bg-gray-200 px-5 py-2 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all" 
+                onClick={closeModal}
+              >
+                Cancel
+              </button>
+              <button 
+                type="submit" 
+                className="bg-teal-500 text-white px-5 py-2 rounded-lg hover:bg-teal-600 shadow focus:outline-none focus:ring-2 focus:ring-teal-400 transition-all"
+                onClick={() => {
+                  console.log('🔘 Add Equipment button clicked');
+                  console.log('📝 Current form state:', form);
+                  console.log('👤 User object:', user);
+                  console.log('📍 Selected site:', selectedSite);
+                }}
+              >
+                {editingEquipment ? 'Update' : 'Add'} Equipment
+              </button>
             </div>
           </form>
         </Modal>

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const RMA = require('../models/RMA');
+const MasterSparePart = require('../models/MasterSparePart');
 const { authenticate } = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
 
@@ -46,8 +47,29 @@ router.post(
       return res.status(400).json({ message: errors.array().map(e => e.msg).join(', ') });
     }
     try {
-      const rma = new RMA(req.body);
+      const rma = new RMA({
+        ...req.body,
+        createdBy: req.user._id
+      });
+
       await rma.save();
+
+      // Update master spare part quantity if spare part RMA
+      if (req.body.sparePart && req.body.rmaType === 'Spare Part') {
+        try {
+          await MasterSparePart.findByIdAndUpdate(
+            req.body.sparePart,
+            {
+              $inc: { availableQuantity: -1 },
+              $inc: { totalUsed: 1 },
+              lastUsedDate: new Date()
+            }
+          );
+        } catch (err) {
+          console.error('Failed to update master spare part quantity:', err);
+        }
+      }
+
       res.status(201).json(rma);
     } catch (err) {
       res.status(400).json({ message: err.message || 'Failed to create RMA' });

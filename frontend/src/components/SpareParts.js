@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Search, Download, RefreshCw, Eye, Edit, Trash2, 
   Calendar, Package, AlertCircle, CheckCircle, Clock, 
-  ArrowUpDown, DollarSign, AlertTriangle, Settings
+  ArrowUpDown, DollarSign, AlertTriangle, Settings, Wrench, Shield, Database
 } from 'lucide-react';
 import Modal from './Modal';
 import ConfirmDialog from './ConfirmDialog';
@@ -34,41 +34,76 @@ export default function SpareParts({ user, showToast, onLogout }) {
   });
   const navigate = useNavigate();
 
+  const [equipmentList, setEquipmentList] = useState([]);
+  const [masterSparePartsList, setMasterSparePartsList] = useState([]); // NEW: master spare parts dropdown
   const [form, setForm] = useState({
     partNumber: '',
     name: '',
     description: '',
     category: '',
     equipment: '',
+    masterSparePart: '', // NEW: link to master spare part
     manufacturer: '',
     originalPartNumber: '',
     supplier: '',
     supplierPartNumber: '',
     quantityUsed: 1,
     unitCost: '',
-    installationDate: new Date().toISOString().split('T')[0],
+    installationDate: '',
+    installedBy: '',
     installationNotes: '',
     replacementReason: 'Preventive Maintenance',
     failureDescription: '',
     hoursOfUse: '',
+    warrantyStatus: 'Under Warranty',
     warrantyStartDate: '',
     warrantyEndDate: '',
     warrantyProvider: '',
+    status: 'Active',
     expectedLifespan: '',
     expectedReplacementDate: '',
     purchaseDate: '',
     purchaseOrderNumber: '',
     invoiceNumber: '',
-    notes: '',
-    specifications: {
-      dimensions: '',
-      weight: '',
-      material: '',
-      compatibility: [],
-      additionalSpecs: ''
-    }
+    notes: ''
   });
 
+  // NEW: Function to handle master spare part selection
+  const handleMasterSparePartChange = (masterSparePartId) => {
+    if (!masterSparePartId) {
+      // If no selection, clear auto-filled fields
+      setForm(prev => ({
+        ...prev,
+        masterSparePart: '',
+        partNumber: '',
+        name: '',
+        category: '',
+        manufacturer: '',
+        supplier: '',
+        unitCost: ''
+      }));
+      return;
+    }
+
+    // Find the selected master spare part
+    const selectedMasterPart = masterSparePartsList.find(part => part._id === masterSparePartId);
+    if (selectedMasterPart) {
+      // Auto-fill the form with master spare part data
+      setForm(prev => ({
+        ...prev,
+        masterSparePart: masterSparePartId,
+        partNumber: selectedMasterPart.partNumber,
+        name: selectedMasterPart.name,
+        category: selectedMasterPart.category,
+        manufacturer: selectedMasterPart.manufacturer || '',
+        supplier: selectedMasterPart.supplier || '',
+        unitCost: selectedMasterPart.unitPrice || '',
+        description: selectedMasterPart.notes || ''
+      }));
+      
+      showToast(`Auto-filled with data from ${selectedMasterPart.name}`, 'info');
+    }
+  };
 
 
   const fetchSpareParts = async () => {
@@ -134,6 +169,21 @@ export default function SpareParts({ user, showToast, onLogout }) {
     fetchEquipment();
     fetchStats();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch master spare parts list for dropdown
+  useEffect(() => {
+    const fetchMasterSpareParts = async () => {
+      try {
+        const res = await axios.get('http://localhost:3000/api/master-spare-parts/active', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setMasterSparePartsList(res.data);
+      } catch (err) {
+        console.error('Failed to fetch master spare parts:', err);
+      }
+    };
+    fetchMasterSpareParts();
+  }, []);
 
   const handleCreate = async () => {
     try {
@@ -219,33 +269,30 @@ export default function SpareParts({ user, showToast, onLogout }) {
       description: '',
       category: '',
       equipment: '',
+      masterSparePart: '', // NEW
       manufacturer: '',
       originalPartNumber: '',
       supplier: '',
       supplierPartNumber: '',
       quantityUsed: 1,
       unitCost: '',
-      installationDate: new Date().toISOString().split('T')[0],
+      installationDate: '',
+      installedBy: '',
       installationNotes: '',
       replacementReason: 'Preventive Maintenance',
       failureDescription: '',
       hoursOfUse: '',
+      warrantyStatus: 'Under Warranty',
       warrantyStartDate: '',
       warrantyEndDate: '',
       warrantyProvider: '',
+      status: 'Active',
       expectedLifespan: '',
       expectedReplacementDate: '',
       purchaseDate: '',
       purchaseOrderNumber: '',
       invoiceNumber: '',
-      notes: '',
-      specifications: {
-        dimensions: '',
-        weight: '',
-        material: '',
-        compatibility: [],
-        additionalSpecs: ''
-      }
+      notes: ''
     });
   };
 
@@ -257,6 +304,7 @@ export default function SpareParts({ user, showToast, onLogout }) {
       description: sparePart.description,
       category: sparePart.category,
       equipment: sparePart.equipment._id,
+      masterSparePart: sparePart.masterSparePart || '', // NEW
       manufacturer: sparePart.manufacturer,
       originalPartNumber: sparePart.originalPartNumber || '',
       supplier: sparePart.supplier || '',
@@ -264,26 +312,22 @@ export default function SpareParts({ user, showToast, onLogout }) {
       quantityUsed: sparePart.quantityUsed,
       unitCost: sparePart.unitCost,
       installationDate: sparePart.installationDate ? new Date(sparePart.installationDate).toISOString().split('T')[0] : '',
+      installedBy: sparePart.installedBy || '',
       installationNotes: sparePart.installationNotes || '',
       replacementReason: sparePart.replacementReason,
       failureDescription: sparePart.failureDescription || '',
       hoursOfUse: sparePart.hoursOfUse || '',
+      warrantyStatus: sparePart.warrantyStatus || 'Under Warranty',
       warrantyStartDate: sparePart.warrantyStartDate ? new Date(sparePart.warrantyStartDate).toISOString().split('T')[0] : '',
       warrantyEndDate: sparePart.warrantyEndDate ? new Date(sparePart.warrantyEndDate).toISOString().split('T')[0] : '',
       warrantyProvider: sparePart.warrantyProvider || '',
+      status: sparePart.status || 'Active',
       expectedLifespan: sparePart.expectedLifespan || '',
       expectedReplacementDate: sparePart.expectedReplacementDate ? new Date(sparePart.expectedReplacementDate).toISOString().split('T')[0] : '',
       purchaseDate: sparePart.purchaseDate ? new Date(sparePart.purchaseDate).toISOString().split('T')[0] : '',
       purchaseOrderNumber: sparePart.purchaseOrderNumber || '',
       invoiceNumber: sparePart.invoiceNumber || '',
-      notes: sparePart.notes || '',
-      specifications: {
-        dimensions: sparePart.specifications?.dimensions || '',
-        weight: sparePart.specifications?.weight || '',
-        material: sparePart.specifications?.material || '',
-        compatibility: sparePart.specifications?.compatibility || [],
-        additionalSpecs: sparePart.specifications?.additionalSpecs || ''
-      }
+      notes: sparePart.notes || ''
     });
     setModalOpen(true);
   };
@@ -404,17 +448,32 @@ export default function SpareParts({ user, showToast, onLogout }) {
               <h2 className="text-3xl font-bold text-gray-800 mb-2">Spare Parts Overview</h2>
               <p className="text-gray-600">Track and manage all equipment spare parts</p>
             </div>
-            <button
-              onClick={() => {
-                setEditingId(null);
-                resetForm();
-                setModalOpen(true);
-              }}
-              className="bg-gradient-to-r from-orange-500 to-red-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center space-x-2"
-            >
-              <Plus className="h-5 w-5" />
-              <span>Add Spare Part</span>
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => {
+                  setEditingId(null);
+                  resetForm();
+                  setModalOpen(true);
+                }}
+                className="bg-gradient-to-r from-orange-500 to-red-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center space-x-2"
+              >
+                <Plus className="h-5 w-5" />
+                <span>Add Spare Part</span>
+              </button>
+              <button
+                onClick={() => {
+                  setEditingId(null);
+                  resetForm();
+                  setModalOpen(true);
+                  showToast('Select a Master Spare Part to auto-fill the form', 'info');
+                }}
+                className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center space-x-2"
+                title="Quick add from Master Spare Parts list"
+              >
+                <Database className="h-5 w-5" />
+                <span>Quick Add from Master</span>
+              </button>
+            </div>
           </div>
 
           {/* Stats Grid */}
@@ -595,6 +654,13 @@ export default function SpareParts({ user, showToast, onLogout }) {
                           <div>
                             <p className="font-semibold text-gray-900">{sparePart.partNumber}</p>
                             <p className="text-sm text-gray-500">Qty: {sparePart.quantityUsed}</p>
+                            {sparePart.masterSparePart && (
+                              <div className="flex items-center space-x-1 mt-1">
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                  ✓ Master
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -649,7 +715,10 @@ export default function SpareParts({ user, showToast, onLogout }) {
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          sparePart.isWarrantyActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          sparePart.warrantyStatus === 'Under Warranty' ? 'bg-green-100 text-green-800' : 
+                          sparePart.warrantyStatus === 'Out of Warranty' ? 'bg-red-100 text-red-800' :
+                          sparePart.warrantyStatus === 'Extended Warranty' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
                         }`}>
                           {sparePart.warrantyStatus}
                         </span>
@@ -728,8 +797,215 @@ export default function SpareParts({ user, showToast, onLogout }) {
             {viewingId ? (
               // View Mode
               <div className="space-y-6">
-                {/* View content will be implemented */}
-                <p className="text-gray-600">Detailed view coming soon...</p>
+                {(() => {
+                  const sparePart = spareParts.find(sp => sp._id === viewingId);
+                  if (!sparePart) return <p className="text-gray-600">Spare part not found...</p>;
+                  
+                  return (
+                    <div className="space-y-6">
+                      {/* Basic Information */}
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                          <Package className="h-5 w-5 mr-2 text-blue-600" />
+                          Basic Information
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Part Number</p>
+                            <p className="text-gray-900 font-semibold">{sparePart.partNumber}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Part Name</p>
+                            <p className="text-gray-900 font-semibold">{sparePart.name}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Category</p>
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {sparePart.category}
+                            </span>
+                          </div>
+                          {sparePart.masterSparePart && (
+                            <div className="md:col-span-2">
+                              <p className="text-sm font-medium text-gray-600">Linked to Master Spare Part</p>
+                              <div className="flex items-center space-x-2">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  ✓ Master Part Linked
+                                </span>
+                                <span className="text-sm text-gray-600">
+                                  {sparePart.masterSparePart.name || 'Master part data'}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Status</p>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(sparePart.status)}`}>
+                              {sparePart.status}
+                            </span>
+                          </div>
+                          <div className="md:col-span-2">
+                            <p className="text-sm font-medium text-gray-600">Description</p>
+                            <p className="text-gray-900">{sparePart.description}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Equipment & Manufacturer */}
+                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                          <Wrench className="h-5 w-5 mr-2 text-green-600" />
+                          Equipment & Manufacturer
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Equipment</p>
+                            <p className="text-gray-900 font-semibold">{sparePart.equipment?.name}</p>
+                            <p className="text-sm text-gray-500">Serial: {sparePart.equipment?.serialNumber}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Manufacturer</p>
+                            <p className="text-gray-900 font-semibold">{sparePart.manufacturer}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Original Part Number</p>
+                            <p className="text-gray-900">{sparePart.originalPartNumber || 'Not specified'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Supplier</p>
+                            <p className="text-gray-900">{sparePart.supplier || 'Not specified'}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Cost & Installation */}
+                      <div className="bg-gradient-to-r from-purple-50 to-violet-50 rounded-xl p-6">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                          <DollarSign className="h-5 w-5 mr-2 text-purple-600" />
+                          Cost & Installation
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Quantity Used</p>
+                            <p className="text-gray-900 font-semibold">{sparePart.quantityUsed}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Unit Cost</p>
+                            <p className="text-gray-900 font-semibold">₹{sparePart.unitCost?.toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Total Cost</p>
+                            <p className="text-gray-900 font-semibold">₹{sparePart.totalCost?.toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Installation Date</p>
+                            <p className="text-gray-900">{new Date(sparePart.installationDate).toLocaleDateString()}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Installed By</p>
+                            <p className="text-gray-900">{sparePart.installedBy?.name || 'Unknown'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Replacement Reason</p>
+                            <p className="text-gray-900">{sparePart.replacementReason}</p>
+                          </div>
+                        </div>
+                        {sparePart.installationNotes && (
+                          <div className="mt-4">
+                            <p className="text-sm font-medium text-gray-600">Installation Notes</p>
+                            <p className="text-gray-900">{sparePart.installationNotes}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Warranty Information */}
+                      <div className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl p-6">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                          <Shield className="h-5 w-5 mr-2 text-yellow-600" />
+                          Warranty Information
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Warranty Status</p>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              sparePart.warrantyStatus === 'Under Warranty' ? 'bg-green-100 text-green-800' : 
+                              sparePart.warrantyStatus === 'Out of Warranty' ? 'bg-red-100 text-red-800' :
+                              sparePart.warrantyStatus === 'Extended Warranty' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {sparePart.warrantyStatus}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Warranty Provider</p>
+                            <p className="text-gray-900">{sparePart.warrantyProvider || 'Not specified'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Warranty Start Date</p>
+                            <p className="text-gray-900">{sparePart.warrantyStartDate ? new Date(sparePart.warrantyStartDate).toLocaleDateString() : 'Not set'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Warranty End Date</p>
+                            <p className="text-gray-900">{sparePart.warrantyEndDate ? new Date(sparePart.warrantyEndDate).toLocaleDateString() : 'Not set'}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Additional Information */}
+                      <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl p-6">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                          <Settings className="h-5 w-5 mr-2 text-gray-600" />
+                          Additional Information
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Expected Lifespan</p>
+                            <p className="text-gray-900">{sparePart.expectedLifespan ? `${sparePart.expectedLifespan} hours` : 'Not specified'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Hours of Use</p>
+                            <p className="text-gray-900">{sparePart.hoursOfUse ? `${sparePart.hoursOfUse} hours` : 'Not specified'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Expected Replacement Date</p>
+                            <p className="text-gray-900">{sparePart.expectedReplacementDate ? new Date(sparePart.expectedReplacementDate).toLocaleDateString() : 'Not set'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Purchase Date</p>
+                            <p className="text-gray-900">{sparePart.purchaseDate ? new Date(sparePart.purchaseDate).toLocaleDateString() : 'Not set'}</p>
+                          </div>
+                        </div>
+                        {sparePart.notes && (
+                          <div className="mt-4">
+                            <p className="text-sm font-medium text-gray-600">Notes</p>
+                            <p className="text-gray-900">{sparePart.notes}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* RMA Information */}
+                      {sparePart.rma && (
+                        <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-xl p-6">
+                          <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                            <AlertTriangle className="h-5 w-5 mr-2 text-red-600" />
+                            RMA Information
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-sm font-medium text-gray-600">RMA Case Number</p>
+                              <p className="text-gray-900 font-semibold">#{sparePart.rma.caseNumber}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-600">RMA Status</p>
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                {sparePart.rma.status}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             ) : (
               // Create/Edit Mode
@@ -785,19 +1061,42 @@ export default function SpareParts({ user, showToast, onLogout }) {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Equipment *</label>
-                    <select
-                      value={form.equipment}
+                    <select 
+                      name="equipment" 
+                      value={form.equipment} 
                       onChange={(e) => setForm({...form, equipment: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">Select Equipment</option>
-                      {equipment.map(eq => (
-                        <option key={eq._id} value={eq._id}>
-                          {eq.name} - {eq.serialNumber}
+                      {equipment.map(equipment => (
+                        <option key={equipment._id} value={equipment._id}>
+                          {equipment.name} - {equipment.serialNumber || equipment.serial_number}
                         </option>
                       ))}
                     </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Master Spare Part 
+                      <span className="text-xs text-gray-500 ml-2">(Auto-fills form when selected)</span>
+                    </label>
+                    <select 
+                      name="masterSparePart" 
+                      value={form.masterSparePart} 
+                      onChange={(e) => handleMasterSparePartChange(e.target.value)}
+                      className="w-full px-4 py-3 border border-blue-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-blue-50"
+                    >
+                      <option value="">Select from Master List (Optional)</option>
+                      {masterSparePartsList.map(part => (
+                        <option key={part._id} value={part._id}>
+                          {part.name} - {part.partNumber} ({part.category}) - ₹{part.unitPrice || 0}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-blue-600 mt-1">
+                      💡 Select a master part to auto-fill Part Number, Name, Category, Manufacturer, Supplier, and Unit Cost
+                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Manufacturer *</label>
@@ -862,6 +1161,146 @@ export default function SpareParts({ user, showToast, onLogout }) {
                       <option value="Upgrade">Upgrade</option>
                       <option value="Other">Other</option>
                     </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Supplier</label>
+                    <input
+                      type="text"
+                      value={form.supplier}
+                      onChange={(e) => setForm({...form, supplier: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Supplier Part Number</label>
+                    <input
+                      type="text"
+                      value={form.supplierPartNumber}
+                      onChange={(e) => setForm({...form, supplierPartNumber: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Hours of Use</label>
+                    <input
+                      type="number"
+                      value={form.hoursOfUse}
+                      onChange={(e) => setForm({...form, hoursOfUse: parseInt(e.target.value) || 0})}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Expected Lifespan (hours)</label>
+                    <input
+                      type="number"
+                      value={form.expectedLifespan}
+                      onChange={(e) => setForm({...form, expectedLifespan: parseInt(e.target.value) || 0})}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Expected Replacement Date</label>
+                    <input
+                      type="date"
+                      value={form.expectedReplacementDate}
+                      onChange={(e) => setForm({...form, expectedReplacementDate: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Purchase Date</label>
+                    <input
+                      type="date"
+                      value={form.purchaseDate}
+                      onChange={(e) => setForm({...form, purchaseDate: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Purchase Order Number</label>
+                    <input
+                      type="text"
+                      value={form.purchaseOrderNumber}
+                      onChange={(e) => setForm({...form, purchaseOrderNumber: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Invoice Number</label>
+                    <input
+                      type="text"
+                      value={form.invoiceNumber}
+                      onChange={(e) => setForm({...form, invoiceNumber: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Warranty Start Date</label>
+                    <input
+                      type="date"
+                      value={form.warrantyStartDate}
+                      onChange={(e) => setForm({...form, warrantyStartDate: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Warranty End Date</label>
+                    <input
+                      type="date"
+                      value={form.warrantyEndDate}
+                      onChange={(e) => setForm({...form, warrantyEndDate: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Warranty Provider</label>
+                    <input
+                      type="text"
+                      value={form.warrantyProvider}
+                      onChange={(e) => setForm({...form, warrantyProvider: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Warranty Status</label>
+                    <select
+                      value={form.warrantyStatus}
+                      onChange={(e) => setForm({...form, warrantyStatus: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="Under Warranty">Under Warranty</option>
+                      <option value="Out of Warranty">Out of Warranty</option>
+                      <option value="Extended Warranty">Extended Warranty</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Installation Notes</label>
+                    <textarea
+                      value={form.installationNotes}
+                      onChange={(e) => setForm({...form, installationNotes: e.target.value})}
+                      rows={3}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Failure Description</label>
+                    <textarea
+                      value={form.failureDescription}
+                      onChange={(e) => setForm({...form, failureDescription: e.target.value})}
+                      rows={3}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                    <textarea
+                      value={form.notes}
+                      onChange={(e) => setForm({...form, notes: e.target.value})}
+                      rows={3}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
                   </div>
                 </div>
 

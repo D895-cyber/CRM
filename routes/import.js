@@ -4,13 +4,14 @@ const csv = require('csv-parser');
 const xlsx = require('xlsx');
 const fs = require('fs');
 const path = require('path');
-const { authenticate, requireAdminOrManager } = require('../middleware/auth');
+const { authenticate, requireAdminOrManager, requireAdmin } = require('../middleware/auth');
 const Client = require('../models/Client');
 const Site = require('../models/Site');
 const Equipment = require('../models/Equipment');
 const Voucher = require('../models/Voucher');
 const Schedule = require('../models/Schedule');
 const User = require('../models/User');
+const MasterSparePart = require('../models/MasterSparePart');
 
 const router = express.Router();
 
@@ -43,6 +44,21 @@ const upload = multer({
   },
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
+
+// Configure multer for file uploads
+const storageMemory = multer.memoryStorage();
+const uploadMemory = multer({ 
+  storage: storageMemory,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        file.mimetype === 'application/vnd.ms-excel') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only Excel files are allowed'), false);
+    }
   }
 });
 
@@ -113,6 +129,175 @@ router.post('/', upload.single('file'), authenticate, requireAdminOrManager, asy
       message: 'Import failed', 
       error: error.message 
     });
+  }
+});
+
+// Import spare parts from Excel
+router.post('/spare-parts', authenticate, requireAdmin, uploadMemory.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const { mapping, updateExisting } = req.body;
+    const columnMapping = JSON.parse(mapping);
+    const shouldUpdateExisting = updateExisting === 'true';
+
+    // Parse Excel file
+    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const data = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+
+    if (data.length < 2) {
+      return res.status(400).json({ message: 'Excel file must have at least a header row and one data row' });
+    }
+
+    const headers = data[0];
+    const rows = data.slice(1);
+
+    // Validate required mappings
+    const requiredFields = ['partNumber', 'name', 'category', 'model'];
+    const missingFields = requiredFields.filter(field => !columnMapping[field]);
+    
+    if (missingFields.length > 0) {
+      return res.status(400).json({ 
+        message: `Missing required field mappings: ${missingFields.join(', ')}` 
+      });
+    }
+
+    // Convert column letters to indices
+    const columnIndices = {};
+    Object.keys(columnMapping).forEach(field => {
+      if (columnMapping[field]) {
+        const columnLetter = columnMapping[field];
+        const columnIndex = xlsx.utils.decode_col(columnLetter);
+        columnIndices[field] = columnIndex;
+      }
+    });
+
+    // Process rows and create spare parts
+    const spareParts = [];
+    const errors = [];
+    let imported = 0;
+    let skipped = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.every(cell => !cell)) continue; // Skip empty rows
+
+      try {
+        const sparePartData = {
+          partNumber: row[columnIndices.partNumber]?.toString().trim(),
+          name: row[columnIndices.name]?.toString().trim(),
+          category: row[columnIndices.category]?.toString().trim(),
+          model: row[columnIndices.model]?.toString().trim(),
+          manufacturer: columnIndices.manufacturer !== undefined ? row[columnIndices.manufacturer]?.toString().trim() : '',
+          supplier: columnIndices.supplier !== undefined ? row[columnIndices.supplier]?.toString().trim() : '',
+          availableQuantity: columnIndices.availableQuantity !== undefined ? 
+            parseInt(row[columnIndices.availableQuantity]) || 0 : 0,
+          unitPrice: columnIndices.unitPrice !== undefined ? 
+            parseFloat(row[columnIndices.unitPrice]) || 0 : 0,
+          status: 'Active',
+          createdBy: req.user._id
+        };
+
+        // Validate required fields
+        if (!sparePartData.partNumber || !sparePartData.name || !sparePartData.category || !sparePartData.model) {
+          errors.push(`Row ${i + 2}: Missing required fields`);
+          skipped++;
+          continue;
+        }
+
+        // Check if part number already exists
+        const existingPart = await MasterSparePart.findOne({ partNumber: sparePartData.partNumber });
+        if (existingPart) {
+          if (shouldUpdateExisting) {
+            // Update existing part
+            await MasterSparePart.findOneAndUpdate(
+              { partNumber: sparePartData.partNumber },
+              {
+                $set: {
+                  name: sparePartData.name,
+                  category: sparePartData.category,
+                  model: sparePartData.model,
+                  manufacturer: sparePartData.manufacturer,
+                  supplier: sparePartData.supplier,
+                  availableQuantity: sparePartData.availableQuantity,
+                  unitPrice: sparePartData.unitPrice,
+                  status: sparePartData.status,
+                  updatedBy: req.user._id,
+                  updatedAt: new Date()
+                }
+              }
+            );
+            imported++;
+          } else {
+            errors.push(`Row ${i + 2}: Part number ${sparePartData.partNumber} already exists`);
+            skipped++;
+          }
+          continue;
+        }
+
+        // Validate category
+        const validCategories = ['Lamp', 'Board', 'Fan', 'Filter', 'Lens', 'Electronics', 'Mechanical', 'Optical', 'Other'];
+        if (!validCategories.includes(sparePartData.category)) {
+          sparePartData.category = 'Other'; // Default to Other if invalid
+        }
+
+        spareParts.push(sparePartData);
+        imported++;
+
+      } catch (error) {
+        errors.push(`Row ${i + 2}: ${error.message}`);
+        skipped++;
+      }
+    }
+
+    // Insert all valid spare parts
+    if (spareParts.length > 0) {
+      try {
+        await MasterSparePart.insertMany(spareParts);
+      } catch (error) {
+        // Handle duplicate key errors from insertMany
+        if (error.code === 11000) {
+          // Extract the duplicate part number from the error
+          const duplicatePartNumber = error.keyValue?.partNumber || 'unknown';
+          errors.push(`Duplicate part number found: ${duplicatePartNumber}`);
+          skipped++;
+          
+          // Try to insert the remaining parts one by one
+          for (const sparePart of spareParts) {
+            try {
+              await MasterSparePart.create(sparePart);
+              imported++;
+            } catch (insertError) {
+              if (insertError.code === 11000) {
+                errors.push(`Part number ${sparePart.partNumber} already exists`);
+                skipped++;
+              } else {
+                errors.push(`Error importing ${sparePart.partNumber}: ${insertError.message}`);
+                skipped++;
+              }
+            }
+          }
+        } else {
+          throw error; // Re-throw non-duplicate errors
+        }
+      }
+    }
+
+    res.json({
+      message: 'Import completed',
+      imported,
+      skipped,
+      errors: errors.slice(0, 10), // Limit error messages
+      totalErrors: errors.length
+    });
+
+  } catch (error) {
+    console.error('Import error:', error);
+    res.status(500).json({ message: 'Failed to import data: ' + error.message });
   }
 });
 

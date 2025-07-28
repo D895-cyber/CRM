@@ -3,6 +3,7 @@ const router = express.Router();
 const SparePart = require('../models/SparePart');
 const Equipment = require('../models/Equipment');
 const RMA = require('../models/RMA');
+const MasterSparePart = require('../models/MasterSparePart');
 const { authenticate, requireAdmin, requireAdminOrManager } = require('../middleware/auth');
 
 // Get all spare parts with equipment and RMA information

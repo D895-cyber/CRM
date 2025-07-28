@@ -1,6 +1,18 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, UserPlus, Wrench, Calendar, Upload, Download, Bell, BarChart3, Settings, Zap, Target } from 'lucide-react';
+import { 
+  Plus, 
+  Calendar, 
+  Package,
+  Wrench,
+  UserCheck,
+  Target,
+  Zap as Lightning,
+  Upload,
+  Download,
+  Settings,
+  Bell
+} from 'lucide-react';
 
 export default function QuickActions({ user }) {
   const navigate = useNavigate();
@@ -18,7 +30,7 @@ export default function QuickActions({ user }) {
     {
       title: 'Add Client',
       description: 'Register a new client',
-      icon: <UserPlus className="h-6 w-6" />,
+      icon: <UserCheck className="h-6 w-6" />,
       gradient: 'from-emerald-500 to-emerald-600',
       hoverGradient: 'from-emerald-600 to-emerald-700',
       onClick: () => navigate('/clients'),
@@ -34,6 +46,24 @@ export default function QuickActions({ user }) {
       roles: ['Admin', 'Manager']
     },
     {
+      title: 'Add Spare Parts',
+      description: 'Manage spare parts',
+      icon: <Package className="h-6 w-6" />,
+      gradient: 'from-green-500 to-green-600',
+      hoverGradient: 'from-green-600 to-green-700',
+      onClick: () => navigate('/spare-parts'),
+      roles: ['Admin', 'Manager']
+    },
+    {
+      title: 'Master Spare Parts',
+      description: 'Centralized inventory',
+      icon: <Package className="h-6 w-6" />,
+      gradient: 'from-purple-500 to-purple-600',
+      hoverGradient: 'from-purple-600 to-purple-700',
+      onClick: () => navigate('/master-spare-parts'),
+      roles: ['Admin', 'Manager']
+    },
+    {
       title: 'Create Schedule',
       description: 'Schedule a service job',
       icon: <Calendar className="h-6 w-6" />,
@@ -43,13 +73,13 @@ export default function QuickActions({ user }) {
       roles: ['Admin', 'Service Coordinator']
     },
     {
-      title: 'Import Data',
-      description: 'Import from Excel/CSV',
+      title: 'Data Import',
+      description: 'Import spare parts from Excel',
       icon: <Upload className="h-6 w-6" />,
-      gradient: 'from-cyan-500 to-cyan-600',
-      hoverGradient: 'from-cyan-600 to-cyan-700',
+      gradient: 'from-green-500 to-emerald-600',
+      hoverGradient: 'from-green-600 to-emerald-700',
       onClick: () => navigate('/data-import'),
-      roles: ['Admin', 'Manager']
+      roles: ['Admin']
     },
     {
       title: 'Export Reports',
@@ -75,7 +105,7 @@ export default function QuickActions({ user }) {
       icon: <BarChart3 className="h-6 w-6" />,
       gradient: 'from-violet-500 to-violet-600',
       hoverGradient: 'from-violet-600 to-violet-700',
-      onClick: () => navigate('/reports'),
+      onClick: () => navigate('/equipment-reports'), // FIXED ROUTE
       roles: ['Admin', 'Manager']
     }
   ];
@@ -93,7 +123,7 @@ export default function QuickActions({ user }) {
           <p className="text-gray-600">Common tasks and shortcuts</p>
         </div>
         <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-          <Zap className="h-6 w-6 text-white" />
+          <Lightning className="h-6 w-6 text-white" />
         </div>
       </div>
 

@@ -96,10 +96,10 @@ export default function Schedule({ user, showToast, onLogout }) {
         console.error('No token found for FSE fetch');
         return;
       }
-      const res = await axios.get('http://localhost:3000/api/users', {
+      const res = await axios.get('http://localhost:3000/api/users/role/FSE', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setFseList(res.data.filter(u => u.role === 'FSE'));
+      setFseList(res.data);
     } catch (err) {
       console.error('Failed to fetch FSEs:', err.response?.data || err.message);
       setError('Failed to fetch FSEs');

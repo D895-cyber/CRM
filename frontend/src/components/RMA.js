@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Modal from './Modal';
 import { useNavigate } from 'react-router-dom';
@@ -9,18 +9,24 @@ export default function RMA({ user, showToast, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingRMA, setEditingRMA] = useState(null); // NEW: add editingRMA state
+  const [submitting, setSubmitting] = useState(false);
+  const [equipmentList, setEquipmentList] = useState([]); // NEW: equipment dropdown
+  const [masterSparePartsList, setMasterSparePartsList] = useState([]); // NEW: master spare parts dropdown
   const [form, setForm] = useState({ 
     caseNumber: '', 
     client: '', 
     equipment: '', 
-    reason: '',
-    priority: 'Medium',
-    contactPerson: '',
-    contactPhone: '',
-    contactEmail: '',
-    serialNumber: '',
-    modelNumber: '',
-    warrantyStatus: 'Under Warranty'
+    sparePart: '', // NEW: spare part field
+    reason: '', 
+    failureDescription: '', 
+    failureDate: '', 
+    failureSymptoms: [], 
+    failureCategory: '', 
+    priority: 'Medium', 
+    impact: 'Medium', 
+    status: 'Pending',
+    rmaType: 'Equipment' // NEW: RMA type field
   });
   const [inspectingId, setInspectingId] = useState(null);
   const [inspectNotes, setInspectNotes] = useState('');
@@ -48,75 +54,147 @@ export default function RMA({ user, showToast, onLogout }) {
     return { Authorization: `Bearer ${token}` };
   };
 
-  // Fetch RMA list from backend
-  useEffect(() => {
-    const fetchRMAs = async () => {
-      setLoading(true);
-      setError('');
-      
-      // Check if user is authenticated
+  const fetchRMAs = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    
+    try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        setError('Not authenticated. Please log in again.');
-        setLoading(false);
-        return;
-      }
-      
+      const response = await axios.get('http://localhost:3000/api/rma', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setRMAs(response.data);
+    } catch (error) {
+      console.error('Error fetching RMAs:', error);
+      showToast('Failed to fetch RMAs', 'error');
+    }
+    setLoading(false);
+  }, [showToast]);
+
+  useEffect(() => {
+    fetchRMAs();
+  }, [fetchRMAs]);
+
+  // Fetch equipment list for dropdown
+  useEffect(() => {
+    const fetchEquipment = async () => {
       try {
-        const res = await axios.get('http://localhost:3000/api/rma', {
+        const res = await axios.get('http://localhost:3000/api/equipment', {
           headers: getAuthHeaders(),
         });
-        setRMAs(res.data);
+        setEquipmentList(res.data);
       } catch (err) {
-        console.error('RMA fetch error:', err.response?.data || err.message);
-        if (err.response?.status === 401) {
-          setError('Authentication failed. Please log in again.');
-          // Redirect to login if token is invalid
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          navigate('/login');
-        } else {
-          setError('Failed to fetch RMA requests: ' + (err.response?.data?.message || err.message));
-        }
+        console.error('Failed to fetch equipment:', err);
       }
-      setLoading(false);
     };
-    fetchRMAs();
-  }, [navigate]);
+    fetchEquipment();
+  }, []);
 
-  const openModal = () => {
-    setForm({ 
+  // Fetch master spare parts list for dropdown
+  useEffect(() => {
+    const fetchMasterSpareParts = async () => {
+      try {
+        const res = await axios.get('http://localhost:3000/api/master-spare-parts/active', {
+          headers: getAuthHeaders(),
+        });
+        setMasterSparePartsList(res.data);
+      } catch (err) {
+        console.error('Failed to fetch master spare parts:', err);
+      }
+    };
+    fetchMasterSpareParts();
+  }, []);
+
+  const openModal = (rma = null) => {
+    setEditingRMA(rma);
+    setForm(rma ? {
+      caseNumber: rma.caseNumber || '',
+      client: rma.client || '',
+      equipment: rma.equipment || '',
+      sparePart: rma.sparePart || '',
+      reason: rma.reason || '',
+      failureDescription: rma.failureDescription || '',
+      failureDate: rma.failureDate || '',
+      failureSymptoms: rma.failureSymptoms || [],
+      failureCategory: rma.failureCategory || '',
+      priority: rma.priority || 'Medium',
+      impact: rma.impact || 'Medium',
+      status: rma.status || 'Pending',
+      rmaType: rma.rmaType || 'Equipment'
+    } : {
       caseNumber: '', 
       client: '', 
       equipment: '', 
-      reason: '',
-      priority: 'Medium',
-      contactPerson: '',
-      contactPhone: '',
-      contactEmail: '',
-      serialNumber: '',
-      modelNumber: '',
-      warrantyStatus: 'Under Warranty'
+      sparePart: '', // NEW: spare part field
+      reason: '', 
+      failureDescription: '', 
+      failureDate: '', 
+      failureSymptoms: [], 
+      failureCategory: '', 
+      priority: 'Medium', 
+      impact: 'Medium', 
+      status: 'Pending',
+      rmaType: 'Equipment' // NEW: RMA type field
     });
     setModalOpen(true);
   };
-  const closeModal = () => setModalOpen(false);
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingRMA(null);
+    setForm({
+      caseNumber: '', 
+      client: '', 
+      equipment: '', 
+      sparePart: '', // NEW: spare part field
+      reason: '', 
+      failureDescription: '', 
+      failureDate: '', 
+      failureSymptoms: [], 
+      failureCategory: '', 
+      priority: 'Medium', 
+      impact: 'Medium', 
+      status: 'Pending',
+      rmaType: 'Equipment' // NEW: RMA type field
+    });
+  };
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
 
-  // Create new RMA
-  const handleCreate = async e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
     setError('');
+
     try {
-      const res = await axios.post('http://localhost:3000/api/rma', form, {
-        headers: getAuthHeaders(),
-      });
-      setRMAs([...rmas, res.data]);
+      const token = localStorage.getItem('token');
+      const payload = {
+        ...form,
+        createdBy: user.id || user._id,
+        equipment: form.equipment || null,
+        sparePart: form.sparePart || null
+      };
+
+      if (editingRMA) {
+        await axios.put(`http://localhost:3000/api/rma/${editingRMA._id}`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        showToast('RMA updated successfully!', 'success');
+      } else {
+        await axios.post('http://localhost:3000/api/rma', payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        showToast('RMA created successfully!', 'success');
+      }
+
       closeModal();
-      showToast('RMA request created!');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create RMA');
+      fetchRMAs();
+    } catch (error) {
+      console.error('Error saving RMA:', error);
+      setError(error.response?.data?.message || 'Failed to save RMA');
+      showToast('Failed to save RMA', 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -442,7 +520,7 @@ export default function RMA({ user, showToast, onLogout }) {
                         {rma.client}
                       </td>
                       <td className="px-6 py-4 text-gray-700">
-                        {rma.equipment}
+                        {rma.equipment?.name ? `${rma.equipment.name}${rma.equipment.serialNumber ? ` (${rma.equipment.serialNumber})` : ''}` : (typeof rma.equipment === 'string' ? rma.equipment : '-')}
                       </td>
                       <td className="px-6 py-4 text-gray-600 text-sm">
                         <div className="space-y-1">
@@ -545,9 +623,9 @@ export default function RMA({ user, showToast, onLogout }) {
           </div>
         )}
 
-        {/* Enhanced Modal for New RMA */}
-        <Modal isOpen={modalOpen} onClose={closeModal} title="Create New RMA Request">
-          <form onSubmit={handleCreate} className="space-y-6">
+        {/* Modal for Add/Edit RMA */}
+        <Modal isOpen={modalOpen} onClose={closeModal} title={editingRMA ? "Edit RMA" : "Create New RMA"}>
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Case Number *</label>
@@ -555,6 +633,84 @@ export default function RMA({ user, showToast, onLogout }) {
                   name="caseNumber" 
                   placeholder="Enter case number" 
                   value={form.caseNumber} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">RMA Type *</label>
+                <select 
+                  name="rmaType" 
+                  value={form.rmaType} 
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                >
+                  <option value="Equipment">Equipment</option>
+                  <option value="Spare Part">Spare Part</option>
+                  <option value="Component">Component</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Client *</label>
+                <input 
+                  name="client" 
+                  placeholder="Enter client name" 
+                  value={form.client} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
+                />
+              </div>
+              {form.rmaType === 'Equipment' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Equipment</label>
+                  <select 
+                    name="equipment" 
+                    value={form.equipment} 
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  >
+                    <option value="">Select Equipment</option>
+                    {equipmentList.map(equipment => (
+                      <option key={equipment._id} value={equipment._id}>
+                        {equipment.name} - {equipment.serialNumber || equipment.serial_number}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {form.rmaType === 'Spare Part' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Spare Part</label>
+                  <select 
+                    name="sparePart" 
+                    value={form.sparePart} 
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  >
+                    <option value="">Select Spare Part</option>
+                    {masterSparePartsList.map(part => (
+                      <option key={part._id} value={part._id}>
+                        {part.name} - {part.partNumber} ({part.category})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Reason *</label>
+                <input 
+                  name="reason" 
+                  placeholder="Enter reason for RMA" 
+                  value={form.reason} 
                   onChange={handleChange} 
                   required 
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
@@ -571,114 +727,18 @@ export default function RMA({ user, showToast, onLogout }) {
                   <option value="Low">Low</option>
                   <option value="Medium">Medium</option>
                   <option value="High">High</option>
+                  <option value="Critical">Critical</option>
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Client Name *</label>
-              <input 
-                name="client" 
-                placeholder="Enter client name" 
-                value={form.client} 
-                onChange={handleChange} 
-                required 
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Equipment *</label>
-                <input 
-                  name="equipment" 
-                  placeholder="Enter equipment name" 
-                  value={form.equipment} 
-                  onChange={handleChange} 
-                  required 
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Warranty Status</label>
-                <select 
-                  name="warrantyStatus" 
-                  value={form.warrantyStatus} 
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                >
-                  <option value="Under Warranty">Under Warranty</option>
-                  <option value="Out of Warranty">Out of Warranty</option>
-                  <option value="Extended Warranty">Extended Warranty</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Serial Number</label>
-                <input 
-                  name="serialNumber" 
-                  placeholder="Enter serial number" 
-                  value={form.serialNumber} 
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Model Number</label>
-                <input 
-                  name="modelNumber" 
-                  placeholder="Enter model number" 
-                  value={form.modelNumber} 
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Person</label>
-                <input 
-                  name="contactPerson" 
-                  placeholder="Contact person name" 
-                  value={form.contactPerson} 
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Phone</label>
-                <input 
-                  name="contactPhone" 
-                  placeholder="Phone number" 
-                  value={form.contactPhone} 
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Email</label>
-                <input 
-                  name="contactEmail" 
-                  type="email"
-                  placeholder="Email address" 
-                  value={form.contactEmail} 
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Reason for RMA *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Failure Description</label>
               <textarea 
-                name="reason" 
-                placeholder="Describe the issue or reason for return" 
-                value={form.reason} 
-                onChange={handleChange} 
-                required 
+                name="failureDescription" 
+                placeholder="Describe the issue in detail..." 
+                value={form.failureDescription} 
+                onChange={handleChange}
                 rows="3"
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none" 
               />
@@ -694,9 +754,10 @@ export default function RMA({ user, showToast, onLogout }) {
               </button>
               <button 
                 type="submit" 
-                className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-3 rounded-xl hover:from-green-600 hover:to-emerald-700 shadow-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition-all font-semibold"
+                className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-8 py-3 rounded-xl hover:from-blue-600 hover:to-indigo-700 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-semibold"
+                disabled={submitting}
               >
-                Create RMA
+                {submitting ? 'Saving...' : (editingRMA ? 'Update' : 'Create')} RMA
               </button>
             </div>
           </form>

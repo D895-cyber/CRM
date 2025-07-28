@@ -7,6 +7,7 @@ import Clients from './components/Clients';
 import Sites from './components/Sites';
 import Equipment from './components/Equipment';
 import RMA from './components/RMA';
+import MasterSpareParts from './components/MasterSpareParts';
 import Users from './components/Users';
 import Schedule from './components/Schedule';
 import FseSchedule from './components/FseSchedule';
@@ -17,6 +18,8 @@ import VoucherManagement from './components/VoucherManagement';
 import VoucherReviewTable from './components/VoucherReviewTable';
 import DataImport from './components/DataImport';
 import SpareParts from './components/SpareParts';
+import Toast from './components/Toast';
+import MyReports from './components/MyReports';
 // import other components as needed
 
 function PrivateRoute({ children }) {
@@ -64,129 +67,160 @@ function App() {
     }
   });
 
+  const [toasts, setToasts] = useState([]);
+
+  const showToast = (message, type = 'info', duration = 3000) => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type, duration }]);
+  };
+
+  const removeToast = (id) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
+
   const handleLogout = () => setUser(null);
 
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={<Login onLogin={user => setUser(user)} />}
-      />
-      <Route
-        path="/signup"
-        element={<Signup />}
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <PrivateRoute>
-            <Dashboard user={user} onLogout={handleLogout} />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/clients"
-        element={
-          <PrivateRoute>
-            <Clients user={user} showToast={() => {}} onLogout={handleLogout} />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/sites"
-        element={
-          <PrivateRoute>
-            <Sites user={user} showToast={() => {}} onLogout={handleLogout} />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/equipment"
-        element={
-          <PrivateRoute>
-            <Equipment user={user} showToast={() => {}} onLogout={handleLogout} />
-          </PrivateRoute>
-        }
-      />
-      {/* Add RMA route if not present */}
-      <Route
-        path="/rma"
-        element={
-          <PrivateRoute>
-            <RMA user={user} showToast={() => {}} onLogout={handleLogout} />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/users"
-        element={
-          <PrivateRoute>
-            <Users user={user} showToast={() => {}} onLogout={handleLogout} />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/schedule"
-        element={
-          <PrivateRoute>
-            <Schedule user={user} showToast={() => {}} onLogout={handleLogout} />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/fse-schedule"
-        element={
-          <PrivateRoute>
-            <FseSchedule user={user} showToast={() => {}} onLogout={handleLogout} />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/attendance"
-        element={
-          <PrivateRoute>
-            <Attendance user={user} showToast={() => {}} onLogout={handleLogout} />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/equipment-reports"
-        element={
-          <PrivateRoute>
-            <EquipmentReports user={user} showToast={() => {}} onLogout={handleLogout} />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/warranty-ew"
-        element={
-          <PrivateRoute>
-            <WarrantyEW user={user} showToast={() => {}} onLogout={handleLogout} />
-          </PrivateRoute>
-        }
-      />
-      {/* Voucher routes */}
-      <Route
-        path="/vouchers"
-        element={
-          <PrivateRoute>
-            <VoucherManagement user={user} showToast={() => {}} onLogout={handleLogout} />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/voucher-review"
-        element={
-          <PrivateRoute>
-            <VoucherReviewTable user={user} showToast={() => {}} onLogout={handleLogout} />
-          </PrivateRoute>
-        }
-      />
+    <>
+      {/* Toast Notifications */}
+      {toasts.map(toast => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          duration={toast.duration}
+          onClose={() => removeToast(toast.id)}
+        />
+      ))}
+
+      <Routes>
+        <Route
+          path="/login"
+          element={<Login onLogin={user => setUser(user)} />}
+        />
+        <Route
+          path="/signup"
+          element={<Signup />}
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <PrivateRoute>
+              <Dashboard user={user} onLogout={handleLogout} />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clients"
+          element={
+            <PrivateRoute>
+              <Clients user={user} showToast={showToast} onLogout={handleLogout} />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/sites"
+          element={
+            <PrivateRoute>
+              <Sites user={user} showToast={showToast} onLogout={handleLogout} />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/equipment"
+          element={
+            <PrivateRoute>
+              <Equipment user={user} showToast={showToast} onLogout={handleLogout} />
+            </PrivateRoute>
+          }
+        />
+        {/* Add RMA route if not present */}
+        <Route
+          path="/rma"
+          element={
+            <PrivateRoute>
+              <RMA user={user} showToast={showToast} onLogout={handleLogout} />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/master-spare-parts"
+          element={
+            <PrivateRoute>
+              <MasterSpareParts user={user} showToast={showToast} onLogout={handleLogout} />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            <PrivateRoute>
+              <Users user={user} showToast={showToast} onLogout={handleLogout} />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/schedule"
+          element={
+            <PrivateRoute>
+              <Schedule user={user} showToast={showToast} onLogout={handleLogout} />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/fse-schedule"
+          element={
+            <PrivateRoute>
+              <FseSchedule user={user} showToast={showToast} onLogout={handleLogout} />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/attendance"
+          element={
+            <PrivateRoute>
+              <Attendance user={user} showToast={showToast} onLogout={handleLogout} />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/equipment-reports"
+          element={
+            <PrivateRoute>
+              <EquipmentReports user={user} showToast={showToast} onLogout={handleLogout} />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/warranty-ew"
+          element={
+            <PrivateRoute>
+              <WarrantyEW user={user} showToast={showToast} onLogout={handleLogout} />
+            </PrivateRoute>
+          }
+        />
+        {/* Voucher routes */}
+        <Route
+          path="/vouchers"
+          element={
+            <PrivateRoute>
+              <VoucherManagement user={user} showToast={showToast} onLogout={handleLogout} />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/voucher-review"
+          element={
+            <PrivateRoute>
+              <VoucherReviewTable user={user} showToast={showToast} onLogout={handleLogout} />
+            </PrivateRoute>
+          }
+        />
                 <Route
             path="/data-import"
             element={
               <PrivateRoute>
-                <DataImport user={user} showToast={() => {}} onLogout={handleLogout} />
+                <DataImport user={user} showToast={showToast} onLogout={handleLogout} />
               </PrivateRoute>
             }
           />
@@ -194,20 +228,29 @@ function App() {
             path="/spare-parts"
             element={
               <PrivateRoute>
-                <SpareParts user={user} showToast={() => {}} onLogout={handleLogout} />
+                <SpareParts user={user} showToast={showToast} onLogout={handleLogout} />
               </PrivateRoute>
             }
           />
-      {/* Add more protected routes here, wrapped in <PrivateRoute> */}
-      <Route
-        path="/"
-        element={localStorage.getItem('token') ? <Navigate to="/dashboard" /> : <Navigate to="/login" />}
-      />
-      <Route
-        path="*"
-        element={<Navigate to="/login" />}
-      />
-    </Routes>
+          <Route
+            path="/my-reports"
+            element={
+              <PrivateRoute>
+                <MyReports user={user} showToast={showToast} onLogout={handleLogout} />
+              </PrivateRoute>
+            }
+          />
+        {/* Add more protected routes here, wrapped in <PrivateRoute> */}
+        <Route
+          path="/"
+          element={localStorage.getItem('token') ? <Navigate to="/dashboard" /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="*"
+          element={<Navigate to="/login" />}
+        />
+      </Routes>
+    </>
   );
 }
 

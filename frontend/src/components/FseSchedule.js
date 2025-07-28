@@ -4,15 +4,15 @@ import { useNavigate } from 'react-router-dom';
 
 export default function FseSchedule({ user, showToast, onLogout }) {
   const [schedules, setSchedules] = useState([]);
+  const [selectedSchedule, setSelectedSchedule] = useState(null);
+  const [reportForm, setReportForm] = useState({
+    remarks: '',
+    photos: []
+  });
+  const [fseReports, setFseReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [markingId, setMarkingId] = useState(null);
-  const [notes, setNotes] = useState('');
-  const [notDoneId, setNotDoneId] = useState(null);
   const [notDoneReason, setNotDoneReason] = useState('');
-  const [reportModalId, setReportModalId] = useState(null);
-  const [reportForm, setReportForm] = useState({ cinemaName: '', address: '', contactDetails: '', engineerVisited: '', projectorModel: '', serialNo: '', lampModel: '', lampHours: '', sections: [], imageEvaluation: [], testResults: [], remarks: [''] });
-  const [reportPhotos, setReportPhotos] = useState([]);
   const [reportError, setReportError] = useState('');
   const navigate = useNavigate();
 
@@ -22,6 +22,7 @@ export default function FseSchedule({ user, showToast, onLogout }) {
       return;
     }
     fetchSchedules();
+    fetchFseReports();
     // eslint-disable-next-line
   }, []);
 
@@ -53,67 +54,47 @@ export default function FseSchedule({ user, showToast, onLogout }) {
     setLoading(false);
   };
 
-  const handleMarkDone = async (id) => {
-    setMarkingId(id);
-    setNotes('');
-  };
-
-  const handleSubmitDone = async (id) => {
+  // NEW: Fetch FSE's reports
+  const fetchFseReports = async () => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        setError('Not authenticated. Please log in again.');
-        return;
-      }
-      await axios.patch(`http://localhost:3000/api/schedule/${id}/status`, { status: 'Completed', notes }, {
+      if (!token) return;
+      const res = await axios.get(`http://localhost:3000/api/schedule/reports/fse/${user.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setMarkingId(null);
-      setNotes('');
-      fetchSchedules();
-      showToast && showToast('Marked as completed!');
+      setFseReports(res.data);
     } catch (err) {
-      console.error('Failed to update status:', err.response?.data || err.message);
-      if (err.response?.status === 401) {
-        setError('Authentication failed. Please log in again.');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/login');
-      } else {
-        setError('Failed to update status: ' + (err.response?.data?.message || err.message));
-      }
+      console.error('Failed to fetch FSE reports:', err.response?.data || err.message);
     }
   };
 
-  const handleNotDone = (id) => {
-    setNotDoneId(id);
-    setNotDoneReason('');
-  };
-
-  const handleSubmitNotDone = async (id) => {
+  const handleMarkDone = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        setError('Not authenticated. Please log in again.');
-        return;
-      }
-      await axios.patch(`http://localhost:3000/api/schedule/${id}/status`, { status: 'Cancelled', notes: notDoneReason }, {
-        headers: { Authorization: `Bearer ${token}` },
+      await axios.put(`http://localhost:3000/api/schedule/${id}/status`, { status: 'Completed' }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-      setNotDoneId(null);
+      showToast('Schedule marked as completed!', 'success');
+      fetchSchedules();
+    } catch (error) {
+      showToast('Failed to update schedule status', 'error');
+    }
+  };
+
+  const handleNotDone = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`http://localhost:3000/api/schedule/${id}/status`, { 
+        status: 'Not Done',
+        notDoneReason: notDoneReason
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      showToast('Schedule marked as not done!', 'success');
       setNotDoneReason('');
       fetchSchedules();
-      showToast && showToast('Marked as not done!');
-    } catch (err) {
-      console.error('Failed to update status:', err.response?.data || err.message);
-      if (err.response?.status === 401) {
-        setError('Authentication failed. Please log in again.');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/login');
-      } else {
-        setError('Failed to update status: ' + (err.response?.data?.message || err.message));
-      }
+    } catch (error) {
+      showToast('Failed to update schedule status', 'error');
     }
   };
 
@@ -125,15 +106,14 @@ export default function FseSchedule({ user, showToast, onLogout }) {
   };
 
   const openReportModal = (s) => {
-    setReportModalId(s._id);
-    setReportForm({ cinemaName: '', address: '', contactDetails: '', engineerVisited: '', projectorModel: '', serialNo: '', lampModel: '', lampHours: '', sections: [], imageEvaluation: [], testResults: [], remarks: [''] });
-    setReportPhotos([]);
+    setSelectedSchedule(s);
+    setReportForm({ remarks: '', photos: [] });
     setReportError('');
   };
-  const closeReportModal = () => setReportModalId(null);
+  const closeReportModal = () => setSelectedSchedule(null);
 
   const handleReportChange = e => setReportForm({ ...reportForm, [e.target.name]: e.target.value });
-  const handleReportPhotoChange = e => setReportPhotos(Array.from(e.target.files));
+  const handleReportPhotoChange = e => setReportForm({ ...reportForm, photos: Array.from(e.target.files) });
   const handleReportRemarkChange = (idx, value) => {
     const remarks = [...reportForm.remarks];
     remarks[idx] = value;
@@ -156,7 +136,7 @@ export default function FseSchedule({ user, showToast, onLogout }) {
         schedule: s._id,
         date: s.date,
       }));
-      reportPhotos.forEach(file => formData.append('photos', file));
+      reportForm.photos.forEach(file => formData.append('photos', file));
       await axios.post('http://localhost:3000/api/schedule/report', formData, {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
       });
@@ -176,16 +156,27 @@ export default function FseSchedule({ user, showToast, onLogout }) {
     }
   };
 
+  // Helper: Check if report exists for a schedule
+  const hasReport = (scheduleId) => fseReports.some(r => r.schedule && r.schedule._id === scheduleId);
+
   return (
     <div>
-      {/* Navbar */}
+      {/* FSE Navigation Bar */}
       <nav className="flex items-center justify-between bg-white shadow px-6 py-4 mb-8 border-b border-gray-100">
-        <span
-          className="text-2xl font-bold text-teal-700 cursor-pointer hover:text-blue-700 transition"
-          onClick={() => navigate('/dashboard')}
-        >
-          CRM Dashboard
-        </span>
+        <div className="flex gap-4">
+          <button
+            className="text-lg font-bold text-teal-700 hover:text-blue-700 transition"
+            onClick={() => navigate('/fse-schedule')}
+          >
+            My Jobs
+          </button>
+          <button
+            className="text-lg font-bold text-indigo-700 hover:text-blue-700 transition"
+            onClick={() => navigate('/my-reports')}
+          >
+            My Reports
+          </button>
+        </div>
         <div className="flex items-center gap-4">
           <span className="text-gray-700 font-medium text-lg">{user?.name} ({user?.role})</span>
           <button
@@ -217,6 +208,7 @@ export default function FseSchedule({ user, showToast, onLogout }) {
                   <th className="px-5 py-3 text-left text-sm font-bold">Status</th>
                   <th className="px-5 py-3 text-left text-sm font-bold">Notes</th>
                   <th className="px-5 py-3 text-sm font-bold text-center">Actions</th>
+                  <th className="px-5 py-3 text-sm font-bold text-center">Report</th> {/* NEW */}
                 </tr>
               </thead>
               <tbody>
@@ -229,34 +221,13 @@ export default function FseSchedule({ user, showToast, onLogout }) {
                     <td className="px-5 py-3">{s.notes}</td>
                     <td className="px-5 py-3 flex gap-2 justify-center">
                       {s.status !== 'Completed' && s.status !== 'Cancelled' ? (
-                        markingId === s._id ? (
-                          <div className="flex flex-col gap-2">
-                            <textarea
-                              value={notes}
-                              onChange={e => setNotes(e.target.value)}
-                              placeholder="Completion notes (optional)"
-                              className="px-2 py-1 border border-gray-300 rounded"
-                            />
-                            <button className="bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all" onClick={() => handleSubmitDone(s._id)}>Submit</button>
-                            <button className="bg-gray-300 text-black px-3 py-1.5 rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all" onClick={() => setMarkingId(null)}>Cancel</button>
-                          </div>
-                        ) : notDoneId === s._id ? (
-                          <div className="flex flex-col gap-2">
-                            <textarea
-                              value={notDoneReason}
-                              onChange={e => setNotDoneReason(e.target.value)}
-                              placeholder="Reason for not done (required)"
-                              className="px-2 py-1 border border-gray-300 rounded"
-                              required
-                            />
-                            <button className="bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 transition-all" onClick={() => handleSubmitNotDone(s._id)} disabled={!notDoneReason.trim()}>Submit</button>
-                            <button className="bg-gray-300 text-black px-3 py-1.5 rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all" onClick={() => setNotDoneId(null)}>Cancel</button>
-                          </div>
+                        hasReport(s._id) ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Report Submitted</span>
                         ) : (
                           <>
                             <button className="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all" onClick={() => handleMarkDone(s._id)}>Mark Done</button>
                             <button className="bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 transition-all" onClick={() => handleNotDone(s._id)}>Not Done</button>
-                            <button className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all" onClick={() => openReportModal(s)}>Fill Service Report</button>
+                            <button className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all" onClick={() => openReportModal(s)}>Submit Report</button>
                           </>
                         )
                       ) : s.status === 'Completed' ? (
@@ -264,6 +235,9 @@ export default function FseSchedule({ user, showToast, onLogout }) {
                       ) : (
                         <span className="text-red-700 font-bold">Not Done</span>
                       )}
+                    </td>
+                    <td className="px-5 py-3 text-center">
+                      {hasReport(s._id) && <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">✔</span>}
                     </td>
                   </tr>
                 ))}
@@ -273,12 +247,12 @@ export default function FseSchedule({ user, showToast, onLogout }) {
         )}
       </div>
       {/* Service Report Modal */}
-      {reportModalId && (
+      {selectedSchedule && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl border border-indigo-100 relative">
             <button className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl font-bold" onClick={closeReportModal}>&times;</button>
             <h3 className="text-xl font-bold mb-4 text-indigo-600">Service Report</h3>
-            <form onSubmit={e => handleReportSubmit(e, schedules.find(s => s._id === reportModalId))} className="flex flex-col gap-4">
+            <form onSubmit={e => handleReportSubmit(e, selectedSchedule)} className="flex flex-col gap-4">
               <input name="cinemaName" placeholder="Cinema Name" value={reportForm.cinemaName} onChange={handleReportChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all" />
               <input name="address" placeholder="Address" value={reportForm.address} onChange={handleReportChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all" />
               <input name="contactDetails" placeholder="Contact Details" value={reportForm.contactDetails} onChange={handleReportChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all" />
